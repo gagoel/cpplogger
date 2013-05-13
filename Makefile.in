@@ -207,7 +207,9 @@ CPPLOGGER_HEADERS += \
     $(wildcard $(abs_cpplogger_includedir)/cpplogger/*.h)
 
 CPPLOGGER_AUX += \
-    README Makefile.in configure.ac configure DEV-README TODO
+    $(abs_top_srcdir)/README $(abs_top_srcdir)/Makefile.in \
+    $(abs_top_srcdir)/configure.ac $(abs_top_srcdir)/configure \
+    $(abs_top_srcdir)/DEV-README $(abs_top_srcdir)/TODO
 
 CPPLOGGER_OBJS += \
     $(addprefix $(abs_cpplogger_builddir)/, \
@@ -592,8 +594,8 @@ SRCS += $(CPPLOGGER_EXAMPLES_SRCS)
 
 CPPLOGGER_VERSION_NUMBER := 1.0.0.0b
 CPPLOGGER_DIST_FILE_NAME := cpplogger-$(CPPLOGGER_VERSION_NUMBER)
-DIST_SRCS := $(patsubst $(abspath .)/%, %, $(SRCS))
-DIST_SRCS += $(AUX)
+SRCS += $(AUX)
+DIST_SRCS := $(patsubst $(abs_top_srcdir)/%, %, $(SRCS))
 
 cpplogger_dist : $(SRCS) $(AUX)
 	echo $(CPPLOGGER_DIST_FILE_NAME) > .fname
@@ -601,8 +603,8 @@ cpplogger_dist : $(SRCS) $(AUX)
 	mkdir $(CPPLOGGER_DIST_FILE_NAME)
 	$(foreach file, $(DIST_SRCS), \
     test -d $(CPPLOGGER_DIST_FILE_NAME)/$(dir $(file)) || \
-    mkdir -p ./$(CPPLOGGER_DIST_FILE_NAME)/$(dir $(file)) && \
-    cp -r ./$(file) ./$(CPPLOGGER_DIST_FILE_NAME)/$(file);)
+    mkdir -p $(CPPLOGGER_DIST_FILE_NAME)/$(dir $(file)) && \
+    cp -r $(abs_top_srcdir)/$(file) $(CPPLOGGER_DIST_FILE_NAME)/$(file);)
 	tar -cjvf $(CPPLOGGER_DIST_FILE_NAME).tar.bz2 $(CPPLOGGER_DIST_FILE_NAME)
 	-rm -rf $(CPPLOGGER_DIST_FILE_NAME) .fname
 

@@ -26,8 +26,11 @@ make          (Needs to run Makefile)
 
 Getting the Source
 ==================
+Clone the repository from github :-
+git clone https://github.com/gagoel/cpplogger.git
 
-
+Download the source from :-
+http://code.google.com/p/gagoel-cpplogger/downloads/list
 
 Installation
 ============
