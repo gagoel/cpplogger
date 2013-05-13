@@ -1,0 +1,624 @@
+# @configure_input@
+SHELL = /bin/sh
+
+# Search path for prerequistics
+#VPATH src
+
+# Search path for particular pattern
+#vpath %.cpp src
+#vpath %.h src
+
+####################################################
+# Directories variables
+####################################################
+
+# Source directories
+top_srcdir = @srcdir@
+abs_top_srcdir = @abs_srcdir@
+
+# Build directories
+builddir = ./build      # TODO - set it into autoconf
+abs_builddir = $(abspath $(builddir))
+
+# Install directories
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = @bindir@
+sbindir = @sbindir@
+libexecdir = @libexecdir@
+datarootdir = @datarootdir@
+datadir = @datadir@
+sysconfdir = @sysconfdir@
+sharedstatedir = @sharedstatedir@
+localstatedir = @localstatedir@
+includedir = @includedir@
+docdir = @docdir@
+infodir = @infodir@
+libdir = @libdir@
+
+##########################################################
+# Commands variables
+##########################################################
+CC = gcc
+CXX = g++ -std=c++0x
+RM = -rm -rf
+AR = ar
+CD = cd 
+RANLIB = ranlib
+MKDIR = mkdir -p
+CP = cp -r
+BASH = /bin/bash
+INSTALL = /usr/bin/install -c -v
+INSTALLDATA = /usr/bin/install -c -v -m 644
+TOUCH = mkdir -p "$$(dirname "$(1)")" ; touch "$(1)"
+
+#######################################################
+# Default flags
+#######################################################
+
+# Debugging and optimization options for the C compiler
+CFLAGS += -O2 -Wall      
+
+# Debugging and optimization options for C++ compiler
+CXXFLAGS := @CXXFLAGS@
+
+# Preprocessor options for C, C++ , -I , -D and -U options.
+CPPFLAGS += -I$(abs_top_srcdir)/include
+
+# Options which effects only to linker, -Ldirectory, -s option
+LDFLAGS += 
+
+# Add libraries, -l option
+LIBS += -lpthread -ldl
+
+# -D option to pass to the C compiler. If AC_CONFIG_HEADERS is called
+# in autoconf, configure replaces it with -DHAVE_CONFIG_H
+DEFS = @DEFS@
+
+#######################################################
+# CPPLOGGER Targets.
+#######################################################
+
+all : cpplogger_build cpplogger_handlers_build cpplogger_examples_build
+
+test : gtest_build cpplogger_build cpplogger_handlers_build \
+       cpplogger_tests_build cpplogger_tests_run
+
+install : all
+	$(MKDIR) $(libdir)/cpplogger
+	$(MKDIR) $(includedir)/cpplogger
+	$(MKDIR) $(prefix)/share/cpplogger
+
+	$(CP) $(abs_builddir)/libs/* $(libdir)/
+	$(CP) $(abs_builddir)/include/* $(includedir)/
+	$(CP) $(abs_builddir)/share/cpplogger/* $(prefix)/share/cpplogger/  	
+	$(call TOUCH,$(CPPLOGGER_CONFIG_FILE))
+	$(call TOUCH,$(CPPLOGGER_LOG_FILE))
+	echo "#End of cpplogger config file" > $(CPPLOGGER_CONFIG_FILE)
+	sed -i '1i $(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)' $(CPPLOGGER_CONFIG_FILE)
+	$(call TOUCH,$(CPPLOGGER_DEFAULT_APP_LOG_FILE))
+
+uninstall :
+	$(RM) $(libdir)/cpplogger
+	$(RM) $(includedir)/cpplogger
+	$(RM) $(prefix)/share/cpplogger
+
+clean : 
+	$(RM) $(abs_builddir)
+
+distclean :
+	$(RM) $(abs_top_srcdir)/Makefile
+	$(RM) $(abs_top_srcdir)/config.log
+	$(RM) $(abs_top_srcdir)/config.status
+	$(RM) $(abs_builddir)
+
+dist : cpplogger_dist
+
+targets :
+	@echo all                 - default, build cpplogger with enabled handlers
+	@echo test                - build and run test cases
+	@echo install             - install cpplogger, enabled handlers and examples
+	@echo uninstall           - delete all installed files and directories
+	@echo clean               - delete all build files
+	@echo distclean           - delete all build files, Makefile, config.log
+
+#######################################################
+# Configuration settings
+#######################################################
+
+# configuration variables
+SRCS :=
+AUX :=
+CPPLOGGER_ENABLED_HANDLERS :=
+CPPLOGGER_CONFIG_FILE :=
+CPPLOGGER_LOG_FILE :=
+CPPLOGGER_CONFIG_DEFAULT_ENTRIES :=
+CPPLOGGER_DEFAULT_APP_LOG_FILE := \
+    $(prefix)/share/cpplogger/default_application_logs.log
+
+# Enabled handlers
+CPPLOGGER_ENABLED_HANDLERS = @cpplogger_handlers@
+
+# cpplogger config file path
+CPPLOGGER_CONFIG_FILE = @cpplogger_config_file@
+ifeq "$(CPPLOGGER_CONFIG_FILE)" "no"
+    CPPLOGGER_CONFIG_FILE = @prefix@/share/cpplogger/cpplogger.conf
+endif
+
+# cpplogger log file path
+CPPLOGGER_LOG_FILE = @cpplogger_log_file@
+ifeq "$(CPPLOGGER_LOG_FILE)" "no"
+    CPPLOGGER_LOG_FILE = @prefix@/share/cpplogger/cpplogger.log
+endif    
+
+# cpplogger default entries in config file
+CPPLOGGER_CONFIG_DEFAULT_ENTRIES := \
+    $(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)\\\#AddHandler entries\n\n
+
+CPPLOGGER_CONFIG_DEFAULT_ENTRIES := \
+    $(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)$(foreach handler,\
+    $(CPPLOGGER_ENABLED_HANDLERS),AddHandler $(handler) \
+    $(prefix)/lib/cpplogger/handlers/$(handler)/lib$(handler)_handler.so\n)\n\n
+
+CPPLOGGER_CONFIG_DEFAULT_ENTRIES := \
+    $(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)\\\#Handler property entries\n\n
+
+# cpplogger LogFile default entry if file handler enabled
+ifneq "$(findstring file,$(CPPLOGGER_ENABLED_HANDLERS))" ""
+CPPLOGGER_CONFIG_DEFAULT_ENTRIES := \
+$(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)LogFile $(CPPLOGGER_DEFAULT_APP_LOG_FILE)\n\n
+endif
+
+CPPLOGGER_CONFIG_DEFAULT_ENTRIES := \
+    $(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)\\\#Package log level entries\n\n
+
+print_config_variables :
+	@echo CPPLOGGER_ENABLED_HANDLERS $(CPPLOGGER_ENABLED_HANDLERS)
+	@echo CPPLOGGER_CONFIG_FILE $(CPPLOGGER_CONFIG_FILE)
+	@echo CPPLOGGER_LOG_FILE $(CPPLOGGER_LOG_FILE)
+	@echo CPPLOGGER_CONFIG_DEFAULT_ENTRIES \
+    $(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)
+
+########################################################
+# cpplogger build
+########################################################
+
+# cpplogger top directories
+abs_cpplogger_srcdir := $(abs_top_srcdir)/src
+abs_cpplogger_builddir := $(abs_builddir)
+abs_cpplogger_includedir := $(abs_top_srcdir)/include
+abs_cpplogger_build_includedir := $(abs_builddir)/include
+abs_cpplogger_build_libdir := $(abs_builddir)/libs/cpplogger
+
+# cpplogger variables
+CPPLOGGER_SRCS :=
+CPPLOGGER_HEADERS :=
+CPPLOGGER_AUX :=
+CPPLOGGER_OBJS :=
+CPPLOGGER_LIBS :=
+CPPLOGGER_SLIBS :=
+CPPLOGGER_PREPROCESSOR :=
+
+# cpplogger sources, headers and objects
+CPPLOGGER_SRCS += \
+    $(wildcard $(abs_cpplogger_srcdir)/*.cpp)
+
+CPPLOGGER_HEADERS += \
+    $(wildcard $(abs_cpplogger_includedir)/cpplogger/*.h)
+
+CPPLOGGER_AUX += \
+    README Makefile.in configure.ac configure DEV-README TODO
+
+CPPLOGGER_OBJS += \
+    $(addprefix $(abs_cpplogger_builddir)/, \
+    $(notdir $(CPPLOGGER_SRCS:.cpp=.o)))
+
+# cpplogger libs
+ifneq "$(CPPLOGGER_SRCS)" ""
+    CPPLOGGER_LIBS += $(abs_cpplogger_build_libdir)/libcpplogger.a
+    CPPLOGGER_SLIBS += $(abs_cpplogger_build_libdir)/libcpplogger.so
+endif
+
+# cpplogger libs and preprocessor
+CPPLOGGER_PREPROCESSOR = \
+    -DCPPLOGGER_CONFIG_FILE="\"$(CPPLOGGER_CONFIG_FILE)\"" \
+    -DCPPLOGGER_LOG_FILE="\"$(CPPLOGGER_LOG_FILE)\""
+
+# cpplogger targets
+cpplogger_build : \
+    $(CPPLOGGER_OBJS) $(CPPLOGGER_LIBS) $(CPPLOGGER_SLIBS)
+
+$(abs_cpplogger_builddir)/%.o : \
+    $(abs_cpplogger_srcdir)/%.cpp $(CPPLOGGER_HEADERS)
+    
+	$(MKDIR) $(abs_cpplogger_build_includedir)/cpplogger
+	$(CP) $(abs_cpplogger_includedir)/cpplogger/*.h \
+    $(abs_cpplogger_build_includedir)/cpplogger/
+	$(MKDIR) $(abs_cpplogger_builddir)
+	$(CXX) $(CPPFLAGS)  $(CXXFLAGS) $(CPPLOGGER_PREPROCESSOR) -fPIC -c $< -o $@
+
+$(abs_builddir)/libs/%.a : \
+    $(CPPLOGGER_OBJS)
+
+	$(MKDIR) $(abs_cpplogger_build_libdir)
+	$(AR) $(ARFLAGS) $@ $^
+
+$(abs_builddir)/libs/%.so : \
+    $(CPPLOGGER_OBJS)
+	
+	$(MKDIR) $(abs_cpplogger_build_libdir)
+	$(CXX) -shared -o $@ $^
+
+print_cpplogger_variables :
+	@echo CPPLOGGER_SRCS $(CPPLOGGER_SRCS)
+	@echo CPPLOGGER_HEADERS $(CPPLOGGER_HEADERS)
+	@echo CPPLOGGER_AUX $(CPPLOGGER_AUX)
+	@echo CPPLOGGER_OBJS $(CPPLOGGER_OBJS)
+	@echo CPPLOGGER_LIBS $(CPPLOGGER_LIBS)
+	@echo CPPLOGGER_SLIBS $(CPPLOGGER_SLIBS)
+	@echo CPPLOGGER_PREPROCESSOR $(CPPLOGGER_PREPROCESSOR)
+
+print_cpplogger_targets :
+	@echo cpplogger_build - Build all cpplogger sources and generate libraries.
+
+SRCS += $(CPPLOGGER_SRCS)
+SRCS += $(CPPLOGGER_HEADERS)
+AUX += $(CPPLOGGER_AUX)
+
+#####################################################
+# Handlers 
+#####################################################
+
+# Handlers top directory
+abs_top_handlers_srcdir := $(abs_top_srcdir)/handlers
+abs_top_handlers_builddir := $(abs_builddir)/handlers
+
+# Handlers srcs, objects variables
+CPPLOGGER_HANLDERS_SRCS :=
+CPPLOGGER_HANDLERS_HEADERS :=
+CPPLOGGER_HANDLERS_OBJS :=
+CPPLOGGER_HANDLERS_BUILD_HEADERS :=
+CPPLOGGER_HANDLERS_LIBS :=
+CPPLOGGER_HANDLERS_SLIBS :=
+CPPLOGGER_HANDLERS_PREPROCESSOR :=
+CPPLOGGER_HANDLERS_LINK_LIBS :=
+CPPLOGGER_HANDLERS_LIB_PATH_PREPROCESSOR := 
+
+# Handlers directories
+abs_handlers_srcdir := \
+    $(foreach handler, $(CPPLOGGER_ENABLED_HANDLERS), \
+    $(abs_top_handlers_srcdir)/$(handler))
+
+abs_handlers_builddir := \
+    $(foreach handler, $(CPPLOGGER_ENABLED_HANDLERS), \
+    $(abs_top_handlers_builddir)/$(handler))
+
+abs_handlers_build_includedir := \
+    $(foreach handler, $(CPPLOGGER_ENABLED_HANDLERS), \
+    $(abs_top_handlers_builddir)/$(handler)/include)
+
+CPPLOGGER_HANDLERS_PREPROCESSOR += \
+    $(foreach handler, $(CPPLOGGER_ENABLED_HANDLERS), \
+    -I$(abs_top_handlers_srcdir)/$(handler)/include)
+
+define function_handler_setup
+
+current_handler_caps_name = \
+    $(shell echo $(1) | tr '[a-z]' '[A-Z]')
+    
+current_handler_srcs = \
+    $$(wildcard $(abs_top_handlers_srcdir)/$(1)/*.cpp)
+
+current_handler_headers_includedir = \
+    $(abs_top_handlers_srcdir)/$(1)/include)
+
+current_handler_headers = \
+    $$(wildcard $(abs_top_handlers_srcdir)/$(1)/*.h)
+
+current_handler_build_headers = \
+    $$(addprefix $(abs_cpplogger_build_includedir)/cpplogger/handlers/$(1)/, \
+    $$(notdir $$(current_handler_headers)))
+
+current_handler_objs = \
+    $$(addprefix $(abs_top_handlers_builddir)/$(1)/, \
+    $$(notdir $$(current_handler_srcs:.cpp=.o)))
+
+current_handler_lib = \
+    $(abs_cpplogger_build_libdir)/handlers/$(1)/lib$(1)_handler.a
+
+current_handler_slib = \
+    $(abs_cpplogger_build_libdir)/handlers/$(1)/lib$(1)_handler.so
+
+current_handler_lib_path_preprocessor = \
+    -D$$(current_handler_caps_name)_HANDLER_LIB="\"$$(current_handler_slib)\""
+
+CPPLOGGER_HANDLERS_SRCS += $$(current_handler_srcs)
+CPPLOGGER_HANDLERS_HEADERS += $$(current_handler_headers)
+CPPLOGGER_HANDLERS_OBJS += $$(current_handler_objs)
+CPPLOGGER_HANDLERS_BUILD_HEADERS += $$(current_handler_build_headers)
+CPPLOGGER_HANDLERS_LIBS += $$(current_handler_lib)
+CPPLOGGER_HANDLERS_SLIBS += $$(current_handler_slib)
+CPPLOGGER_HANDLERS_LIB_PATH_PREPROCESSOR += \
+    $$(current_handler_lib_path_preprocessor)
+
+$(abs_cpplogger_build_includedir)/cpplogger/handlers/$(1)/%.h : \
+    $(abs_top_handlers_srcdir)/$(1)/%.h
+
+	$(MKDIR) $(abs_cpplogger_build_includedir)/cpplogger/handlers/$(1)
+	$(CP) $$< $$@
+
+$(abs_top_handlers_builddir)/$(1)/%.o : \
+    $(abs_top_handlers_srcdir)/$(1)/%.cpp $$(current_handler_headers)
+
+	$(CXX) $$(CPPFLAGS) $ $(CPPLOGGER_HANDLERS_PREPROCESSOR) $$(CXXFLAGS) -fPIC \
+    $(CPPLOGGER_HANDLERS_LINK_LIBS) -c $$< -o $$@
+
+$(abs_cpplogger_build_libdir)/handlers/$(1)/lib$(1)_handler.a : \
+    $$(current_handler_objs)
+	
+	$(MKDIR) $(abs_cpplogger_build_libdir)/handlers/$(1)
+	$(AR) $(ARFLAGS) $$@ $$^
+
+$(abs_cpplogger_build_libdir)/handlers/$(1)/lib$(1)_handler.so : \
+    $$(current_handler_objs)
+
+	$(MKDIR) $(abs_cpplogger_build_libdir)/handlers/$(1)
+	$(CXX) -shared -o $$@ $$^
+
+endef
+
+$(foreach handler, $(CPPLOGGER_ENABLED_HANDLERS), \
+$(eval $(call function_handler_setup,$(handler))))
+
+# Handlers main target
+cpplogger_handlers_build : \
+    handlers_dirs_setup $(CPPLOGGER_HANDLERS_BUILD_HEADERS) \
+    $(CPPLOGGER_HANDLERS_OBJS) $(CPPLOGGER_HANDLERS_LIBS) \
+    $(CPPLOGGER_HANDLERS_SLIBS)
+
+handlers_dirs_setup :
+	if [ "$(CPPLOGGER_HANDLERS_OBJS)" != "" ]; then \
+    var=`echo "$(abs_handlers_builddir)" | sed -e 's/^[ \t]*//'` && \
+    $(MKDIR) "$${var}"; \
+    fi
+
+print_handlers_variables :
+	@echo ABS_TOP_HANDLERS_SRCDIR $(abs_top_handlers_srcdir)
+	@echo ENABLED_HANDLERS $(CPPLOGGER_ENABLED_HANDLERS)
+	@echo HANDLERS_SRCS $(CPPLOGGER_HANDLERS_SRCS)
+	@echo HANDLERS_HEADERS $(CPPLOGGER_HANDLERS_BUILD_HEADERS)
+	@echo HANDLERS_OBJS $(CPPLOGGER_HANDLERS_OBJS)
+	@echo HANDLERS_LIBS $(CPPLOGGER_HANDLERS_LIBS)
+	@echo HANDLERS_SLIBS $(CPPLOGGER_HANDLERS_SLIBS)
+	@echo HANDLERS_PREPROCESSOR $(CPPLOGGER_HANDLERS_PREPROCESSOR)
+	@echo $(abs_handlers_builddir)
+
+print_handlers_targets :
+	@echo cpplogger_handlers_build - build all enabled handlers and generate \
+                                     libraries.
+
+SRCS += $(CPPLOGGER_HANDLERS_SRCS)
+SRCS += $(CPPLOGGER_HANDLERS_HEADERS)
+
+########################################################
+# Test
+########################################################
+
+############## GTEST BUILD START #######################
+# We are using GTEST (googletest) Framework for testing.
+
+# GTEST top directories
+abs_gtest_srcdir := $(abs_top_srcdir)/external/gtest
+abs_gtest_builddir := $(abs_builddir)/external/gtest
+
+# GTEST local variables
+GTEST_SRCS :=
+GTEST_HEADERS :=
+GTEST_OBJS := \
+    $(abs_gtest_builddir)/gtest-all.o $(abs_gtest_builddir)/gtest_main.o
+GTEST_LIBS := \
+    $(abs_gtest_builddir)/gtest.a $(abs_gtest_builddir)/gtest_main.a
+GTEST_FLAGS :=
+
+GTEST_SRCS += \
+    $(wildcard $(abs_gtest_srcdir)/src/*.cc)
+
+GTEST_HEADERS += \
+    $(wildcard $(abs_gtest_srcdir)/src/*.h)
+GTEST_HEADERS += \
+    $(wildcard $(abs_gtest_srcdir)/include/gtest/*.h)
+GTEST_HEADERS += \
+    $(wildcard $(abs_gtest_srcdir)/include/gtest/internal/*.h)
+
+GTEST_FLAGS += -I$(abs_gtest_srcdir)/include -L$(abs_gtest_builddir)
+
+gtest_build : $(GTEST_LIBS)
+
+$(abs_gtest_builddir)/gtest-all.o : $(GTEST_SRCS) $(GTEST_HEADERS)
+	$(MKDIR) $(abs_gtest_builddir)
+	$(CXX) -I$(abs_gtest_srcdir)/include -I$(abs_gtest_srcdir) \
+    -g -Wall -Wextra -c $(abs_gtest_srcdir)/src/gtest-all.cc -o $@
+
+$(abs_gtest_builddir)/gtest_main.o : $(GTEST_SRCS) $(GTEST_HEADERS)
+	$(CXX) -I$(abs_gtest_srcdir)/include -I$(abs_gtest_srcdir) \
+    -g -Wall -Wextra -c $(abs_gtest_srcdir)/src/gtest_main.cc -o $@
+
+$(abs_gtest_builddir)/gtest.a : $(abs_gtest_builddir)/gtest-all.o
+	$(AR) $(ARFLAGS) $@ $^
+
+$(abs_gtest_builddir)/gtest_main.a : $(GTEST_OBJS)
+	$(AR) $(ARFLAGS) $@ $^
+
+SRCS += $(GTEST_SRCS)
+SRCS += $(GTEST_HEADERS)
+
+################### GTEST BUILD END #########################
+
+# Tests top directories
+abs_src_testdir := $(abs_top_srcdir)/tests
+abs_build_testdir := $(abs_builddir)/tests
+
+# Tests local variables
+CPPLOGGER_TESTS_SRCS :=
+CPPLOGGER_TESTS_HEADERS :=
+CPPLOGGER_TESTS_OBJS :=
+CPPLOGGER_TESTS_EXEC :=
+CPPLOGGER_TESTS_FLAGS :=
+
+# Tests sources, headers and objects
+CPPLOGGER_TESTS_SRCS += \
+    $(foreach file, $(wildcard $(abs_src_testdir)/*.cpp), \
+    $(if $(findstring _test.cpp, $(file)), $(file)))
+
+CPPLOGGER_TESTS_HEADERS += \
+    $(foreach file, $(wildcard $(abs_src_testdir)/*.h), \
+    $(if $(findstring _test.h, $(file)), $(file)))
+
+CPPLOGGER_TESTS_OBJS = \
+    $(addprefix $(abs_build_testdir)/, \
+    $(notdir $(CPPLOGGER_TESTS_SRCS:.cpp=.o)))
+
+# Tests executable
+ifneq "$(CPPLOGGER_TESTS_SRCS)" ""
+    CPPLOGGER_TESTS_EXEC = $(abs_build_testdir)/cpplogger_tests
+endif
+
+# Tests compiler flags, runtime shared lib path -rpath, preprocessors -D, 
+# cpplogger and handlers headers search paths -I, linked libraries search 
+# path -L 
+CPPLOGGER_TESTS_FLAGS += \
+    $(foreach curr_dir, $(dir $(CPPLOGGER_HANDLERS_LIBS)), \
+    -Wl,-rpath=$(curr_dir))
+
+CPPLOGGER_TESTS_FLAGS += \
+    -DTEST_SRC_HOME="\"$(abs_src_testdir)\"" \
+    -DTEST_BUILD_HOME="\"$(abs_build_testdir)\""
+
+CPPLOGGER_TESTS_FLAGS += \
+    $(foreach handler, $(CPPLOGGER_ENABLED_HANDLERS), \
+    -DHAVE_HANDLER_$(shell echo $(handler) | tr '[a-z]' '[A-Z]'))
+    
+CPPLOGGER_TESTS_FLAGS += $(CPPLOGGER_HANDLERS_LIB_PATH_PREPROCESSOR)
+
+CPPLOGGER_TESTS_FLAGS += \
+    -I$(abs_cpplogger_build_includedir)
+
+CPPLOGGER_TESTS_FLAGS += \
+    -L$(abs_cpplogger_build_libdir)
+
+# Tests targets
+
+cpplogger_tests_build : \
+    tests_dirs_setup $(CPPLOGGER_TESTS_OBJS) $(CPPLOGGER_TESTS_EXEC)
+
+cpplogger_tests_run :
+	$(BASH) -c $(CPPLOGGER_TESTS_EXEC)
+
+tests_dirs_setup :
+	$(MKDIR) $(abs_build_testdir)
+
+$(abs_build_testdir)/%.o : \
+    $(abs_src_testdir)/%.cpp $(CPPLOGGER_HEADERS) $(GTEST_HEADERS)
+     
+	$(CXX)  $(CXXFLAGS) $(CPPLOGGER_TESTS_FLAGS) $(GTEST_FLAGS) \
+    -fPIC -c $< -o $@
+
+$(abs_build_testdir)/cpplogger_tests : \
+    $(CPPLOGGER_TESTS_OBJS) $(CPPLOGGER_SLIBS) \
+    $(CPPLOGGER_HANDLERS_SLIBS) $(GTEST_LIBS)
+
+	$(CXX) $(CXXFLAGS) $(CPPLOGGER_TESTS_FLAGS) $(GTEST_FLAGS) $^ \
+    $(CPLOGGER_LIBS) $(CPPLOGGER_HANDLERS_LIBS) $(GTEST_LIBS) $(LIBS) -o $@
+
+print_tests_variables :
+	@echo GTEST_DIR $(GTEST_DIR)
+	@echo GTEST_HEADERS $(GTEST_HEADERS)
+	@echo GTEST_FLAGS $(GTEST_FLAGS)
+	@echo GTEST_LIBS $(GTEST_LIBS)
+	@echo CPPLOGGER_TESTS_SRCS $(CPPLOGGER_TESTS_SRCS)
+	@echo CPPLOGGER_TESTS_HEADERS $(CPPLOGGER_TESTS_HEADERS)
+	@echo CPPLOGGER_TESTS_OBJS $(CPPLOGGER_TESTS_OBJS)
+	@echo CPPLOGGER_TESTS_EXEC $(CPPLOGGER_TESTS_EXEC)
+	@echo CPPLOGGER_TESTS_FLAGS $(CPPLOGGER_TESTS_FLAGS)
+
+print_tests_targets :
+	@echo test - build tests and run
+
+SRCS += $(CPPLOGGER_TESTS_SRCS)
+SRCS += $(CPPLOGGER_TESTS_HEADERS)
+
+########################################################
+# Examples
+########################################################
+
+# Examples top directories
+abs_top_examples_srcdir = $(abs_top_srcdir)/examples
+abs_top_examples_builddir = $(abs_builddir)/share/cpplogger/examples
+
+# Examples variables
+CPPLOGGER_EXAMPLES_SRCS :=
+CPPLOGGER_EXAMPLES_EXEC :=
+CPPLOGGER_EXAMPLES_FLAGS := \
+    -DCPPLOGGER_DEFAULT_APP_LOG_FILE="\"$(CPPLOGGER_DEFAULT_APP_LOG_FILE)\"" \
+    -I$(includedir) -I$(abs_cpplogger_build_includedir) \
+    -L$(libdir)/cpplogger -L$(abs_cpplogger_build_libdir) \
+    -Wl,-rpath=$(libdir)/cpplogger
+
+CPPLOGGER_EXAMPLES_SRCS += \
+    $(wildcard $(abs_top_examples_srcdir)/*_example.cpp)
+
+CPPLOGGER_EXAMPLES_EXEC += \
+    $(addprefix $(abs_top_examples_builddir)/, \
+    $(notdir $(CPPLOGGER_EXAMPLES_SRCS:.cpp=.out)))
+
+# Examples targests
+cpplogger_examples_build : $(CPPLOGGER_EXAMPLES_EXEC)
+
+$(abs_top_examples_builddir)/%.out : $(abs_top_examples_srcdir)/%.cpp
+
+	$(MKDIR) $(abs_top_examples_builddir)
+	$(CXX) $(CXXFLAGS) \
+    $(CPPLOGGER_EXAMPLES_FLAGS) -o $@ $< -lcpplogger -ldl
+
+print_examples_variables :
+	@echo CPPLOGGER_EXAMPLES_SRCS $(CPPLOGGER_EXAMPLES_SRCS)
+	@echo CPPLOGGER_EXAMPLES_EXEC $(CPPLOGGER_EXAMPLES_EXEC)
+
+SRCS += $(CPPLOGGER_EXAMPLES_SRCS)
+
+#########################################################
+# Generate distributable
+#########################################################
+
+CPPLOGGER_VERSION_NUMBER := 1.0.0.0b
+CPPLOGGER_DIST_FILE_NAME := cpplogger-$(CPPLOGGER_VERSION_NUMBER)
+DIST_SRCS := $(patsubst $(abspath .)/%, %, $(SRCS))
+DIST_SRCS += $(AUX)
+
+cpplogger_dist : $(SRCS) $(AUX)
+	echo $(CPPLOGGER_DIST_FILE_NAME) > .fname
+	-rm -rf $(CPPLOGGER_DIST_FILE_NAME)
+	mkdir $(CPPLOGGER_DIST_FILE_NAME)
+	$(foreach file, $(DIST_SRCS), \
+    test -d $(CPPLOGGER_DIST_FILE_NAME)/$(dir $(file)) || \
+    mkdir -p ./$(CPPLOGGER_DIST_FILE_NAME)/$(dir $(file)) && \
+    cp -r ./$(file) ./$(CPPLOGGER_DIST_FILE_NAME)/$(file);)
+	tar -cjvf $(CPPLOGGER_DIST_FILE_NAME).tar.bz2 $(CPPLOGGER_DIST_FILE_NAME)
+	-rm -rf $(CPPLOGGER_DIST_FILE_NAME) .fname
+
+#########################################################
+# Debugging targets
+#########################################################
+
+printvars : print_gtest_variables print_config_variables \
+            print_cpplogger_variables print_handlers_variables \
+            print_tests_variables print_examples_variables
+
+printtargets : print_cpplogger_targets print_handlers_targets \
+               print_tests_targets print_examples_targets
+
+#########################################################
+# PHONY targets
+#########################################################
+.PHONY : test-run clean all cpplogger_build distclean install uninstall \
+         cpplogger_dist

@@ -1,0 +1,10 @@
+Version - 1.0.0.0b
+------------------
+
+1. Create deliverable zip (Makefile entry) - done
+2. Logs (Critical, Error, Warning, Info, Debug, Hack) - Complete method functionality - done
+3. Add << logging feature. - done
+4. Complete examples for each logging.
+5. Complete configure.ac file.
+6. Complete README file.
+7. Developer README file. 

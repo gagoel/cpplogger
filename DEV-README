@@ -1,0 +1,48 @@
+TODO - Needs to complete this...
+
+
+
+
+
+
+
+
+
+
+
+Test Distributable
+------------------------------------------------
+
+1. Download distributable in $dist-test directory.
+2. unzip distributable tar -xvf $dist-name
+3. Run the following commands one by one, 
+   There should not be any error message.
+
+./configure --prefix=/install/path
+make
+make test
+make install
+
+# Testing debug version
+make uninstall
+make distclean
+./configure --prefix=/install/path --enable-debug
+make
+make test
+make install
+
+# Testing with handler enabled
+make uninstall
+make distclean
+./configure --prefix=/install/path --enable-file-handler
+make
+make test
+make install
+
+# Testing debug version with handler enabled
+make uninstall
+make distclean
+./configure --prefix=/install/path --enable-file-handler --enable-debug
+make
+make test
+make install

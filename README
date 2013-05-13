@@ -1,0 +1,194 @@
+CPPLOGGER C++ Logging Utility
+=============================
+
+Overview
+========
+CPPLOGGER is a C++ logging utility. It provides an API to log messages of type
+Critical, Error, Warning, Info, Debug and Hack. Message will be logged or not 
+for particular logging, depends on logging level set for the package in
+configuration file. 
+
+It provides three types of log level FINE, FINER and FINEST. Critical, Error 
+and Warning logs are always logged. Info logs are logged only if logging level 
+for the package is FINE, FINER or FINEST. Debug logs are logged only if logging 
+level for the package is FINER or FINEST. Hack logs are logged only if logging 
+level for the package is FINEST.
+
+It is highly configurable such as log level for the package, log formats to 
+store logs in the file etc. It is also highly extensible (To get new log
+format you can write new handler add it into the cpplogger).
+
+Requirements for End Users
+==========================
+C++11 version (CPPLOGGER is using some of C++11 features) 
+Bash          (Needs to run the build script)
+make          (Needs to run Makefile)
+
+Getting the Source
+==================
+
+
+
+Installation
+============
+CPPLOGGER can be installed in two flavours normal build or debug build 
+(contains debug symbols). Minimum one output handler is required to start
+logging messages. Currently we have only file type logging, which can be enabled
+by using --enable-file-handler option in configuration.
+
+Normal Build -
+
+./configure --enable-file-handler
+make
+make test
+make install
+
+Debug Build -
+
+./configure --enable-file-handler --enable-debug
+make
+make test
+make install
+
+It will install cpplogger shared libs in $prefix/lib/cpplogger path, You need
+to add this path in your application shared libs search path to use cpplogger.
+
+Handlers shared libs will be installed in $prefix/lib/cpplogger/handlers/${handler-name}
+If you are changing this path make the same change in configuration file.
+For each enabled handler we have an entry in configuration file as ex -
+
+AddHandler handler-name  handler-full-path
+
+Configuration
+=============
+CPPLOGGER provides different configuration option which can be used while 
+building CPPLOGGER. Default cpplogger uses following paths for configuration
+file and cpplogger logs file. This can be changed by --with-config-file and
+--with-log-file options respectively.
+
+Default configuration file path -
+$prefix/share/cpplogger/cpplogger.conf
+
+Default cpplogger log file path -
+$prefix/share/cpplogger/cpplogger.log
+
+File handler uses $prefix/share/cpplogger/default_application_logs.log file
+for default application logging. It can be set in configuration file with
+'LogFile' property.
+
+See default configuration file for details.
+
+Examples
+========
+Logs can be logged by calling logging methods Critical, Error, Warning, Info,
+Debug or Hack - or using the '<<' shift overloading operator. 
+Have a look at below examples :-
+
+Logger class is part of cpputils::cpplogger namespace so you have to call
+method accordingly.
+
+Critical logging - (It will log message, debug stacktrace and terminate 
+                    the program)
+--------------------------------------------------------------
+using namespace cpputils::cpplogger;
+
+Logger::Init();
+Logger& logger = Logger::CreateInstance("your.package.name");
+logger.Critical("Critical logging example");
+logger(CRITICAL) << "Critical logging example";
+Logger::CleanUp();
+---------------------------------------------------------------
+
+Error logging - (It will log error message.)
+--------------------------------------------------------------
+using namespace cpputils::cpplogger;
+
+Logger::Init();
+Logger& logger = Logger::CreateInstance("your.package.name");
+logger.Error("Error logging example");
+logger(ERROR) << "Error logging example";
+Logger::CleanUp();
+---------------------------------------------------------------
+
+Warning logging - (It will log warning message.)
+--------------------------------------------------------------
+using namespace cpputils::cpplogger;
+
+Logger::Init();
+Logger& logger = Logger::CreateInstance("your.package.name");
+logger.Warning("Warning logging example");
+logger(WARNING) << "Warning logging example";
+Logger::CleanUp();
+---------------------------------------------------------------
+
+Info logging - (It will log info message. It will log only if log level for
+                package 'your.package.name' is FINE or higher. It can be
+                set in configuration file, Add following line in configuration
+                file to enable it -
+                SetLogLevel   your.package.name   FINE)
+--------------------------------------------------------------
+using namespace cpputils::cpplogger;
+
+Logger::Init();
+Logger& logger = Logger::CreateInstance("your.package.name");
+logger.Info("Info logging example");
+logger(INFO) << "Info logging example";
+Logger::CleanUp();
+---------------------------------------------------------------
+
+Debug logging - (It will log debug message. It will log only if log level for
+                package 'your.package.name' is FINER or higher. It can be
+                set in configuration file, Add following line in configuration
+                file to enable it -
+                SetLogLevel   your.package.name   FINER)
+--------------------------------------------------------------
+using namespace cpputils::cpplogger;
+
+Logger::Init();
+Logger& logger = Logger::CreateInstance("your.package.name");
+logger.Debug("Debug logging example");
+logger(DEBUG) << "Debug logging example";
+Logger::CleanUp();
+---------------------------------------------------------------
+
+Hack logging - (It will log hack message. It will log only if log level for
+                package 'your.package.name' is FINEST. It can be
+                set in configuration file, Add following line in configuration
+                file to enable it -
+                SetLogLevel   your.package.name   FINEST)
+--------------------------------------------------------------
+using namespace cpputils::cpplogger;
+
+Logger::Init();
+Logger& logger = Logger::CreateInstance("your.package.name");
+logger.Hack("Hack logging example");
+logger(HACK) << "Hack logging example";
+Logger::CleanUp();
+---------------------------------------------------------------
+
+You can also check current package log level and log message accordingly to
+reduce method call overhead.
+
+
+Info logging with FINE log level check - 
+    (It will call log info method if logging level for current package is FINE
+     or higher.
+--------------------------------------------------------------
+using namespace cpputils::cpplogger;
+
+Logger::Init();
+Logger& logger = Logger::CreateInstance("your.package.name");
+
+if(logger.IsFine())
+{
+    logger.Info("Info logging example");
+    logger(INFO) << "Info logging example";
+}
+
+Logger::CleanUp();
+---------------------------------------------------------------
+
+Contacts
+========
+Please contact me for any comment / question at gauravgoel9nov@gmail.com
+
