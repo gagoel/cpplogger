@@ -211,6 +211,7 @@ bool LoggerUtils::IsFileAccessible(const std::string& in_file_name)
     std::fstream teststream(in_file_name.c_str(), std::fstream::in);
     if(teststream.good() == false)
     {
+        teststream.close();
         return false;
     }
     teststream.close();

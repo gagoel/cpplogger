@@ -15,7 +15,7 @@
 #endif
 
 #include "cpplogger/cpplogger_handler.h"
-#include "cpplogger/cpplogger_conf.h"
+#include "cpplogger/cpplogger_config.h"
 #include "cpplogger/cpplogger.h"
 #include "gtest/gtest.h"
 
@@ -30,6 +30,7 @@ class LoggerTest : public ::testing::Test
         std::string log_file;
         std::fstream log_file_stream;
         std::string cpplogger_log_file;
+        std::string app_name = "cpplogger-test";
 
         std::string test1_package_name = "cpputils.cpplogger.test1";
         std::string test1_critical_log_message = "Critical message test1";
@@ -49,15 +50,18 @@ class LoggerTest : public ::testing::Test
 
     virtual void SetUp()
     {
+        // Cleaning cpplogger logging file.
         cpplogger_log_file = std::string(TEST_BUILD_HOME) + \
             std::string("/cpplogger_test_logs.log");
         std::fstream cpplogger_log_fstream(cpplogger_log_file.c_str(),
             std::fstream::out);
         cpplogger_log_fstream.close();
+
         LoggerLogging::SetLogFileName(cpplogger_log_file);
         
-        config_file = CreateConfigFile();
+        // Creating configuration file and log file.
         log_file = CreateLogFile();
+        config_file = CreateConfigFile();
     }
 
     virtual void TearDown()
@@ -75,6 +79,8 @@ std::string LoggerTest::CreateConfigFile()
                                    std::string("/cpplogger_test_temp.conf");
     config_file_stream.open(curr_config_file.c_str(), std::fstream::out | \
                             std::fstream::trunc);
+    std::string log_file_entry = "LogFile " + log_file;
+    config_file_stream.write(log_file_entry.c_str(), log_file_entry.size());
     config_file_stream.close();
     return curr_config_file;
 }
@@ -100,6 +106,7 @@ void LoggerTest::DeleteLogFile()
 }
 
 #ifdef HAVE_HANDLER_FILE
+
 std::string LoggerTest::GetLogFileLine(int line_num)
 {
     int max_line_length = 1000;
@@ -116,16 +123,19 @@ std::string LoggerTest::GetLogFileLine(int line_num)
 }
 #endif
 
+
 #ifdef HAVE_HANDLER_FILE
+
 TEST_F(LoggerTest, Error)
 {
-    LoggerConf::SetConfigFile(config_file);
-    EXPECT_EQ(true, Logger::Init());
+    EXPECT_EQ(true, LogManager::Init(app_name, config_file));
+    EXPECT_EQ(true, LoggerFileHandler::Init(this->app_name));
     LoggerFileHandler::SetLogFileName(log_file);
-    LoggerHandler::AddHandler("file", FILE_HANDLER_LIB);
+    LoggerOutput::GetLoggerOutputObject(app_name).AddOutputHandler(
+        "file", FILE_HANDLER_LIB);
 
     // Logging error message.
-    Logger log = Logger::CreateInstance(test1_package_name);
+    Logger& log = LogManager::GetLogger(test1_package_name);
     log.Error(test1_error_log_message); int line_num = __LINE__;
 
     // Testing logged strings.
@@ -140,41 +150,54 @@ TEST_F(LoggerTest, Error)
     EXPECT_FALSE(log_in_file.find(std::to_string(line_num)) 
         == std::string::npos);
 
-    Logger::CleanUp();
+    LogManager::CleanUp();
+    LoggerFileHandler::CleanUp(this->app_name); 
 }
 
 TEST_F(LoggerTest, IsFine)
 {
-    LoggerConf::SetConfigFile(config_file);
-    EXPECT_EQ(true, Logger::Init());
+    LogManager::Init(app_name, config_file);
+    LoggerFileHandler::Init(this->app_name);
     LoggerFileHandler::SetLogFileName(log_file);
-    LoggerHandler::AddHandler("file", FILE_HANDLER_LIB);
+    LoggerOutput::GetLoggerOutputObject(app_name).AddOutputHandler(
+        "file", FILE_HANDLER_LIB);
 
     // Logging error message.
-    Logger log = Logger::CreateInstance(test1_package_name);
+    Logger& log = LogManager::GetLogger(test1_package_name);
     EXPECT_TRUE(log.IsFine() == false);
-    LoggerConf::SetLogLevelString(test1_package_name, "FINE");
+
+    LoggerConfig::GetLoggerConfigObject(app_name).SetLogLevelString(
+        test1_package_name, "FINE");
     EXPECT_TRUE(log.IsFine() == true);
-    LoggerConf::SetLogLevelString(test1_package_name, "FINER");
-    EXPECT_TRUE(log.IsFine() == true);
-    LoggerConf::SetLogLevelString(test1_package_name, "FINEST");
-    EXPECT_TRUE(log.IsFine() == true);
-    LoggerConf::SetLogLevelString(test1_package_name, "DEFAULT");
-    EXPECT_TRUE(log.IsFine() == false);
     
-    Logger::CleanUp();
+    LoggerConfig::GetLoggerConfigObject(app_name).SetLogLevelString(
+        test1_package_name, "FINER");
+    EXPECT_TRUE(log.IsFine() == true);
+
+    LoggerConfig::GetLoggerConfigObject(app_name).SetLogLevelString(
+        test1_package_name, "FINEST");
+    EXPECT_TRUE(log.IsFine() == true);
+
+    LoggerConfig::GetLoggerConfigObject(app_name).SetLogLevelString(
+        test1_package_name, "DEFAULT");
+    EXPECT_TRUE(log.IsFine() == false); 
+    
+    LogManager::CleanUp();
+    LoggerFileHandler::CleanUp(this->app_name); 
 }
 
 TEST_F(LoggerTest, LogDefaultMessage)
 {
-    LoggerConf::SetConfigFile(config_file);
-    EXPECT_EQ(true, Logger::Init());
+    LogManager::Init(app_name, config_file);
+    LoggerFileHandler::Init(this->app_name);
     LoggerFileHandler::SetLogFileName(log_file);
-    LoggerHandler::AddHandler("file", FILE_HANDLER_LIB);
+    LoggerOutput::GetLoggerOutputObject(app_name).AddOutputHandler(
+        "file", FILE_HANDLER_LIB);
 
-    Logger log = Logger::CreateInstance(test1_package_name);
+    Logger& log = LogManager::GetLogger(test1_package_name);
     EXPECT_TRUE(log.IsFine() == false);
-    LoggerConf::SetLogLevelString(test1_package_name, "DEFAULT");
+    LoggerConfig::GetLoggerConfigObject(app_name).SetLogLevelString(
+        test1_package_name, "DEFAULT");
     EXPECT_TRUE(log.IsFine() == false);
 
     //log.Critical(test1_critical_log_message); - Terminate the program
@@ -193,19 +216,22 @@ TEST_F(LoggerTest, LogDefaultMessage)
     std::string log4 = LoggerTest::GetLogFileLine(3);
     EXPECT_EQ("", log4);
 
-    Logger::CleanUp();
+    LogManager::CleanUp();
+    LoggerFileHandler::CleanUp(this->app_name); 
 }
 
 TEST_F(LoggerTest, LogFineMessage)
 {
-    LoggerConf::SetConfigFile(config_file);
-    EXPECT_EQ(true, Logger::Init());
+    EXPECT_EQ(true, LogManager::Init(app_name, config_file));
+    LoggerFileHandler::Init(this->app_name);
     LoggerFileHandler::SetLogFileName(log_file);
-    LoggerHandler::AddHandler("file", FILE_HANDLER_LIB);
+    LoggerOutput::GetLoggerOutputObject(app_name).AddOutputHandler(
+        "file", FILE_HANDLER_LIB);
 
-    Logger log = Logger::CreateInstance(test1_package_name);
+    Logger& log = LogManager::GetLogger(test1_package_name);
     EXPECT_TRUE(log.IsFine() == false);
-    LoggerConf::SetLogLevelString(test1_package_name, "FINE");
+    LoggerConfig::GetLoggerConfigObject(app_name).SetLogLevelString(
+        test1_package_name, "FINE");
     EXPECT_TRUE(log.IsFine() == true);
 
     //log.Critical(test1_critical_log_message); Terminate the program
@@ -226,6 +252,7 @@ TEST_F(LoggerTest, LogFineMessage)
     std::string log5 = LoggerTest::GetLogFileLine(4);
     EXPECT_EQ("", log5);
 
-    Logger::CleanUp();
+    LogManager::CleanUp();
+    LoggerFileHandler::CleanUp(this->app_name); 
 }
 #endif

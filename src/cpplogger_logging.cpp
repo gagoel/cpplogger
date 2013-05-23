@@ -34,10 +34,16 @@ std::string LoggerLogging::logging_file_name = CPPLOGGER_LOG_FILE;
 
 std::fstream *LoggerLogging::logging_file_stream = NULL;
 
-#ifdef CPPLOGGER_DEBUG
+#ifdef CPPLOGGER_VLOGGING
 bool LoggerLogging::verbose = true;
 #else
 bool LoggerLogging::verbose = false;
+#endif
+
+#ifdef CPPLOGGER_VVLOGGING
+bool LoggerLogging::vverbose = true;
+#else
+bool LoggerLogging::vverbose = false;
 #endif
 
 bool LoggerLogging::initialized = false; 
@@ -108,17 +114,61 @@ LoggerLogging::~LoggerLogging()
 
 bool LoggerLogging::IsLogVerbose()
 {
-    return LoggerLogging::verbose;
+    return LoggerLogging::vverbose || LoggerLogging::verbose;
+}
+
+bool LoggerLogging::IsLogVVerbose()
+{
+    return LoggerLogging::vverbose;
 }
 
 void LoggerLogging::CPPLOGGERLog(const char* type, const char* file, int line, 
     const char* func, std::string message)
 {
-    if(strcmp(type, "INFO") || LoggerLogging::IsLogVerbose())
+    if(strcmp(type, "INFO") == 0)
+    {
+        if(LoggerLogging::IsLogVerbose())
+        {
+            this->Log("[" + std::string(type) + "] [" + std::string(file) + 
+                ":" + std::to_string(line) + "] [" + std::string(func) + 
+                "] [" + message + "] \n");
+        }
+    }
+    else if(strcmp(type, "DEBUG") == 0)
+    {
+        if(LoggerLogging::IsLogVVerbose())
+        {
+            // Creating stack trace.
+            const int max_backtrace_len = 50;
+            void *backtrace_buff[max_backtrace_len];
+            size_t backtrace_size;
+            char **backtrace_strings;
+
+            backtrace_size = backtrace(backtrace_buff, max_backtrace_len);
+            backtrace_strings = 
+                backtrace_symbols(backtrace_buff, backtrace_size);
+            
+            std::string log_msg;
+            log_msg = message + "\n";
+
+            // not printing logging call stack
+            for(unsigned int i = 1; i < backtrace_size; i++)
+            {
+                log_msg = log_msg + backtrace_strings[i] + "\n";
+            }
+            log_msg = log_msg + "\n";     
+
+            this->Log("[" + std::string(type) + "] [" + std::string(file) + 
+                ":" + std::to_string(line) + "] [" + std::string(func) + 
+                "] [" + log_msg + "] \n");
+        }
+    }
+    else
     {
         this->Log("[" + std::string(type) + "] [" + std::string(file) + ":" +
             std::to_string(line) + "] [" + std::string(func) + "] [" + 
             message + "] \n");
+
     }
 }
 

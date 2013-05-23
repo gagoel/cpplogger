@@ -75,26 +75,33 @@ void LoggerFileHandler::SetLogFileName(const std::string& in_log_file)
         return;
     }
 
-    if(GetLogFileName() != in_log_file) 
+    if(initialized == false)
     {
+        std::string error_msg =
+            "LoggerFileHandler needs to be initialized before this call"
+            "Input log file is " + in_log_file;
+        logger.LogError(error_msg);
+        throw std::runtime_error(error_msg);
+    }
+
+    if(log_file_name.compare(in_log_file) != 0) 
+    { 
+        // Closing current log file stream.
+        log_file_stream->close();
+        delete log_file_stream;
+        log_file_stream = new std::fstream();
+
         log_file_name = in_log_file;
-        
-        if(initialized == true)
+        // Opening new stream.
+        log_file_stream->open(in_log_file.c_str(), std::fstream::in | \
+            std::fstream::out | std::fstream::app);
+
+        if(log_file_stream->good() == false)
         {
-            // Closing current log file stream.
-            log_file_stream->close();
-
-            // Opening new stream.
-            log_file_stream->open(in_log_file.c_str(), std::fstream::in | \
-                std::fstream::out | std::fstream::app);
-
-            if(log_file_stream->good() == false)
-            {
-                logger.LogError(
-                    "Log file stream was not created successfully. It may be"
-                    " log file does not have write access.");
-                return;
-            }
+            logger.LogError(
+                "Log file stream was not created successfully. It may be"
+                " log file does not have write access.");
+            return;
         }
     }
 }
@@ -135,8 +142,10 @@ bool LoggerFileHandler::IsLogFormatExists(const std::string& in_log_format)
     return true;
 }
 
-void LoggerFileHandler::SetLogFormat(const std::string& in_log_format_name,
-    const std::string& in_log_format_value)
+void LoggerFileHandler::SetLogFormat(
+    const std::string& in_log_format_name,
+    const std::string& in_log_format_value
+)
 {
     if(in_log_format_name == "" || in_log_format_value == "")
     {
@@ -149,7 +158,8 @@ void LoggerFileHandler::SetLogFormat(const std::string& in_log_format_name,
 }
 
 std::string LoggerFileHandler::GetLogFormat(
-    const std::string& in_log_format_name)
+    const std::string& in_log_format_name
+)
 {
     if(in_log_format_name == "")
     {
@@ -168,7 +178,8 @@ std::string LoggerFileHandler::GetLogFormat(
 
 void LoggerFileHandler::SetFormatSpecifier(
     const std::string& in_specifier_name,
-    const std::string& in_specifier_value)
+    const std::string& in_specifier_value
+)
 {
     if(in_specifier_name == "" || in_specifier_value == "")
     {
@@ -181,7 +192,8 @@ void LoggerFileHandler::SetFormatSpecifier(
 }
 
 std::string LoggerFileHandler::GetFormatSpecifier(
-    const std::string& in_specifier_name)
+    const std::string& in_specifier_name
+)
 {
     if(in_specifier_name == "")
     {
@@ -219,8 +231,10 @@ void LoggerFileHandler::SetCommonFormatSpecifiers(const LogDB& in_log_db)
     SetFormatSpecifier("line", oss.str());
 }
 
-void LoggerFileHandler::ParseLogFormat(std::string& out_parsed_log,
-    const std::string& in_log_format)
+void LoggerFileHandler::ParseLogFormat(
+    std::string& out_parsed_log,
+    const std::string& in_log_format
+)
 {
     int idx = 0;
     int log_format_str_size = in_log_format.size();
@@ -414,112 +428,133 @@ void LoggerFileHandler::PrintHackLog(const HackLogDB& hack_log_db)
     }
 }
 
-bool LoggerFileHandler::Init()
+bool LoggerFileHandler::Init(const std::string& in_app_name)
 {
-    // Registering handler properties.
-    LoggerConf::RegisterProperty("LogFile", IsValidLogFileName);
-
-    std::vector<std::string>::iterator vstr_it;
-    std::vector<std::string> log_formats = {
-        "LogFormat", "LogCriticalFormat", "LogErrorFormat",
-        "LogWarningFormat", "LogInfoFormat", "LogDebugFormat",
-        "LogHackFormat"
-    };
-
-    for(vstr_it = log_formats.begin(); vstr_it != log_formats.end(); vstr_it++)
+    if(initialized == false)
     {
-        LoggerConf::RegisterProperty(*vstr_it, IsValidLogFormat);
-    }
+        // Registering handler properties.
+        LoggerConfig& config_obj = 
+            LoggerConfig::GetLoggerConfigObject(in_app_name);
 
-    // Check log file name exists otherwise get it from configuration.
-    // If log file name is not found this method terminates.
-    if(log_file_name == "")
-    {
-        // Loading log file from configuration file.
-        if(LoggerConf::IsPropertyExists("LogFile"))
+        config_obj.RegisterProperty("LogFile", IsValidLogFileName);
+
+        std::vector<std::string>::iterator vstr_it;
+        std::vector<std::string> log_formats = {
+            "LogFormat", "LogCriticalFormat", "LogErrorFormat",
+            "LogWarningFormat", "LogInfoFormat", "LogDebugFormat",
+            "LogHackFormat"
+        };
+
+        for(vstr_it = log_formats.begin(); 
+            vstr_it != log_formats.end(); 
+            vstr_it++)
         {
-            SetLogFileName(LoggerConf::GetPropertyValue("LogFile"));
+            config_obj.RegisterProperty(*vstr_it, IsValidLogFormat);
         }
-        else
+
+        // Check log file name exists otherwise get it from configuration.
+        // If log file name is not found this method terminates.
+        if(log_file_name == "")
         {
-            logger.LogWarning(
-                "Log file name does not exist. Add LogFile property in"
-                " configuration file.");
+            // Loading log file from configuration file.
+            if(config_obj.IsPropertyExists("LogFile"))
+            {
+                log_file_name = config_obj.GetPropertyValue("LogFile");
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Log file name does not exist. Add LogFile property in"
+                    " configuration file.");
+                return false;
+            }
+        }
+
+        // Initializing data structures.
+        log_file_stream = new std::fstream();
+        LoggerFileHandler::log_formats_map =
+            new std::map<std::string, std::string>();
+        LoggerFileHandler::log_format_specifiers_map =
+            new std::map<std::string, std::string>();
+        
+        // Loading log formats from configuration file, if not found check for
+        // default format in configuration file, if default format also does not
+        // exist set default format defined in this class.
+        for(vstr_it = log_formats.begin(); 
+            vstr_it != log_formats.end(); 
+            vstr_it++)
+        {
+            if(config_obj.IsPropertyExists(*vstr_it))
+            {
+                SetLogFormat(*vstr_it, config_obj.GetPropertyValue(*vstr_it));
+            }
+            else if(config_obj.IsPropertyExists("LogFormat"))
+            { 
+                SetLogFormat(*vstr_it, 
+                    config_obj.GetPropertyValue("LogFormat"));
+            }
+            else
+            {
+                SetLogFormat(*vstr_it, default_log_format);
+            }
+        }
+
+        // Opening log file.
+        log_file_stream->open(GetLogFileName(), std::fstream::in | \
+            std::fstream::out | std::fstream::app);
+
+        if(log_file_stream->fail())
+        {
+            logger.LogError("Error in opening log file stream.");
             return false;
         }
-    }
 
-    // Initializing data structures.
-    log_file_stream = new std::fstream();
-    LoggerFileHandler::log_formats_map =
-        new std::map<std::string, std::string>();
-    LoggerFileHandler::log_format_specifiers_map =
-        new std::map<std::string, std::string>();
-    
-    // Loading log formats from configuration file, if not found check for
-    // default format in configuration file, if default format also does not
-    // exist set default format defined in this class.
-    for(vstr_it = log_formats.begin(); vstr_it != log_formats.end(); vstr_it++)
-    {
-        if(LoggerConf::IsPropertyExists(*vstr_it))
+        if(logger.IsLogVerbose())
         {
-            SetLogFormat(*vstr_it, LoggerConf::GetPropertyValue(*vstr_it));
+            logger.LogInfo("File Handler was initialized successful.");
         }
-        else if(LoggerConf::IsPropertyExists("LogFormat"))
-        { 
-            SetLogFormat(*vstr_it, LoggerConf::GetPropertyValue("LogFormat"));
-        }
-        else
-        {
-            SetLogFormat(*vstr_it, default_log_format);
-        }
+
+        initialized = true;
     }
-
-    // Opening log file.
-    log_file_stream->open(GetLogFileName(), std::fstream::in | \
-        std::fstream::out | std::fstream::app);
-
-    if(log_file_stream->fail())
-    {
-        logger.LogError("Error in opening log file stream.");
-        return false;
-    }
-
-    if(logger.IsLogVerbose())
-    {
-        logger.LogInfo("File Handler was initialized successful.");
-    }
-
-    initialized = true;
     return true;
 }
 
-void LoggerFileHandler::CleanUp()
+void LoggerFileHandler::CleanUp(const std::string& in_app_name)
 {
-    // Closing log file stream.
-    log_file_stream->close();
-    
-    // Deleting heap memory.
-    delete log_formats_map;
-    delete log_format_specifiers_map;
-    delete log_file_stream;
-    
-    // UnRegistering handler properties.
-    LoggerConf::UnRegisterProperty("LogFile");
-
-    std::vector<std::string>::iterator vstr_it;
-    std::vector<std::string> log_formats = {
-        "LogFormat", "LogCriticalFormat", "LogErrorFormat",
-        "LogWarningFormat", "LogInfoFormat", "LogDebugFormat",
-        "LogHackFormat"
-    };
-
-    for(vstr_it = log_formats.begin(); vstr_it != log_formats.end(); vstr_it++)
+    if(initialized == true)
     {
-        LoggerConf::UnRegisterProperty(*vstr_it);
-    }
+        // Closing log file stream.
+        log_file_stream->flush();
+        log_file_stream->close();
+        log_file_name = "";
+        
+        // Deleting heap memory.
+        delete log_formats_map;
+        delete log_format_specifiers_map;
+        delete log_file_stream;
+        
+        // UnRegistering handler properties.
+        LoggerConfig& config_obj = 
+            LoggerConfig::GetLoggerConfigObject(in_app_name);
 
-    initialized = false;
+        config_obj.UnRegisterProperty("LogFile");
+
+        std::vector<std::string>::iterator vstr_it;
+        std::vector<std::string> log_formats = {
+            "LogFormat", "LogCriticalFormat", "LogErrorFormat",
+            "LogWarningFormat", "LogInfoFormat", "LogDebugFormat",
+            "LogHackFormat"
+        };
+
+        for(vstr_it = log_formats.begin(); 
+            vstr_it != log_formats.end(); 
+            vstr_it++)
+        {
+            config_obj.UnRegisterProperty(*vstr_it);
+        }
+
+        initialized = false;
+    }
 }
 
 }    // namespace cpplogger

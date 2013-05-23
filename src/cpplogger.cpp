@@ -4,7 +4,7 @@
 
  TODO - Add the license.
   
- @FileName                         logger.cpp
+ @FileName                         cpplogger.cpp
  @Creator                          gauravgoel9nov@gmail.com
  @CreationTimestamp                Sat Apr 20 20:00:39 2013
  @FileModifiers                    gauravgoel9nov@gmail.com
@@ -21,187 +21,339 @@
 
 #include "cpplogger/cpplogger.h"
 
-namespace cpputils
+namespace cpputils { namespace cpplogger {
+
+LoggerLogging LogManager::logger("cpputils.cpplogger.LogManager");
+bool LogManager::initialized = false;
+
+std::string LogManager::appname = "";
+std::string LogManager::app_config_file = APP_DEFAULT_CONFIG_FILE;
+std::map<std::string, Logger*>* LogManager::component_name_obj_map = NULL;
+
+bool LogManager::Init(
+    const std::string in_app_name,
+    const std::string in_app_config_file
+)
 {
-namespace cpplogger
+    if(LogManager::initialized == false)
+    {
+        // Logging initialization. It should be first initialization.
+        logger.LogInfo("Initializing log manager.");
+
+        LoggerLogging::Init();
+
+        if(in_app_name.size() == 0 || in_app_config_file.size() == 0)
+        {
+            std::string error_msg =
+                "app name or config file can not be empty string.";
+            logger.LogError(error_msg);
+
+            throw std::runtime_error(error_msg);
+        }
+
+        if(LoggerUtils::IsFileAccessible(in_app_config_file) == false)
+        {
+            std::string error_msg =
+                "configuration file is not accessible.";
+            logger.LogError(error_msg);
+
+            throw std::runtime_error(error_msg);
+        }
+
+        appname = in_app_name;
+        app_config_file = in_app_config_file;
+
+        // Creating configuration object and initializing it.
+        
+        if(LoggerConfig::Init() == false)
+        {
+            std::string error_msg =
+                "Error in initializing configuration object";
+            logger.LogError(error_msg);
+
+            return false;
+        }
+
+        LoggerConfig::GetLoggerConfigObject(in_app_name, in_app_config_file);
+       
+        logger.LogInfo("Configuration object created successfully.");
+          
+        // Creating output object and initializing it.
+        
+        if(LoggerOutput::Init() == false)
+        {
+            std::string error_msg =
+                "Error in initializing logger output object";
+            logger.LogError(error_msg);
+
+            return false;
+        }
+        else
+        {
+            logger.LogInfo("Initialized Logger Output object successfully.");
+        }
+
+        LoggerOutput::GetLoggerOutputObject(in_app_name);
+        
+        logger.LogInfo("Created Logger Output object successfully."); 
+
+        // Initializing component map.
+
+        component_name_obj_map = new std::map<std::string, Logger*>();
+
+        logger.LogInfo(
+            std::string("AppLogger was initialized successfully for app ") +
+            in_app_name);
+        
+        LogManager::initialized = true;
+    }
+        
+    return true;
+}
+
+bool LogManager::Init(const std::string in_app_name)
 {
+    return LogManager::Init(in_app_name, APP_DEFAULT_CONFIG_FILE);
+}
+
+void LogManager::CleanUp()
+{
+    if(LogManager::initialized == true)
+    {
+        logger.LogDebug("Cleaning log manager.");
+
+        std::map<std::string, Logger*>::iterator str_logger_it;
+        for(str_logger_it = component_name_obj_map->begin();
+            str_logger_it != component_name_obj_map->end();
+            str_logger_it++)
+        {
+            str_logger_it->second->CleanUp();
+            delete str_logger_it->second;
+        }
+
+        delete component_name_obj_map;
+        
+        LoggerOutput::CleanUp();
+        LoggerConfig::CleanUp();
+        LoggerLogging::CleanUp();
+        
+        LogManager::initialized = false;
+    }
+}
+
+Logger& LogManager::GetLogger(const std::string in_comp_name)
+{
+    if(in_comp_name.size() == 0)
+    {
+        std::string error_msg =
+            "component name can not be empty string.";
+        logger.LogError(error_msg);
+
+        throw std::runtime_error(error_msg);
+    }
+
+    // Checking group name string syntax.
+    if(!LoggerUtils::IsGroupNameSyntaxOk(in_comp_name))
+    {
+        std::string error_msg =
+            "Group name string syntax is not correct. Group name allows only"
+            " [a-z] and . chars, Every package/module name should be seperated"
+            " with one dot . char only.";
+
+        logger.LogError(error_msg);
+	    throw std::runtime_error(error_msg);
+    }
+
+    std::map<std::string, Logger*>::iterator str_logger_it;
+
+    // Checking group name object exist in cache or not. If not creating
+    // new object and adding it into cache and returns the same.
+    if((str_logger_it = component_name_obj_map->find(
+        in_comp_name)) != component_name_obj_map->end())
+    {
+        if(logger.IsLogVerbose())
+	    {
+            logger.LogInfo(
+                "Logger object found in cache for group " + in_comp_name);
+	    }
+        return *(str_logger_it->second); 
+    }
+    
+    if(logger.IsLogVerbose())
+    {
+        logger.LogInfo(
+            "Logger object is not present in cache for group" + \
+            in_comp_name + \
+            " creating new one and adding to cache"); 
+    }
+
+    Logger* new_logger_obj = Logger::GetLoggerObject(appname, in_comp_name);
+    
+    if(new_logger_obj->Init() == false)
+    {
+        delete new_logger_obj;
+
+        std::string error_msg =
+            "false to initialized logger object.";
+        logger.LogError(error_msg);
+
+        throw std::runtime_error(error_msg);
+    }
+
+    (*component_name_obj_map)[in_comp_name] = new_logger_obj;
+
+    if(logger.IsLogVerbose())
+    {
+        logger.LogInfo(
+            "Logger object created successfully and added to the cache." \
+            " Log leve for group " + in_comp_name + " is " + \
+            LoggerConfig::GetLoggerConfigObject(appname).GetLogLevelString(
+            in_comp_name));
+    }
+    
+    return *new_logger_obj;
+}
+
+// Logger class implementation
 
 LoggerLogging Logger::logger("cpputils.cpplogger.Logger");
 
-bool Logger::initialized = false;
-
-std::map<std::string, Logger*>* Logger::groupname_loggerobj_map = NULL;
-
-Logger::Logger(const std::string& in_group_name)
-{
-    this->group_name = in_group_name;
-}
-
-void Logger::CriticalLog(
+void Logger::_Log(
+    const char* in_log_type, 
     const char* in_file_name, 
     int in_line_number, 
     const char* in_method_name, 
     const char* in_method_signature,
-    std::string& unformatted_string)
+    std::string& in_message
+)
 {
-    // Creating stack trace.
-    const int max_backtrace_len = 50;
-    void *backtrace_buff[max_backtrace_len];
-    size_t backtrace_size;
-    char **backtrace_strings;
+    if(logger.IsLogVerbose())
+    {
+        std::string info_msg = 
+            std::string("Logging message of type ") + \
+            std::string(in_log_type) + \
+            std::string(" messge ") + in_message;
+        logger.LogInfo(info_msg);
+    }
 
-    backtrace_size = backtrace(backtrace_buff, max_backtrace_len);
-    backtrace_strings = backtrace_symbols(backtrace_buff, backtrace_size);
+    LoggerOutput& logger_output_obj = 
+        LoggerOutput::GetLoggerOutputObject(this->appname);
 
-    LogDB log_struct = {
-        this->group_name,
-        in_file_name,
-        in_line_number,
-        in_method_name,
-        in_method_signature,
-        unformatted_string
-    };
+    if(!strcmp(in_log_type, "CRITICAL"))
+    {
+        logger_output_obj.OutputCriticalLog(
+            this->component_name,
+            in_file_name, 
+            in_line_number, 
+            in_method_name, 
+            in_method_signature, 
+            in_message);
+    }
+    else if(!strcmp(in_log_type, "ERROR"))
+    {
+        logger_output_obj.OutputErrorLog(
+            this->component_name,
+            in_file_name, 
+            in_line_number, 
+            in_method_name, 
+            in_method_signature, 
+            in_message);
+    }
+    else if(!strcmp(in_log_type, "WARNING"))
+    {
+        logger_output_obj.OutputWarningLog(
+            this->component_name,
+            in_file_name, 
+            in_line_number, 
+            in_method_name, 
+            in_method_signature, 
+            in_message);
+    }
+    else if(!strcmp(in_log_type, "INFO"))
+    {
+        if(!this->IsFine()) return;
 
-    CriticalLogDB critical_log_struct = {
-        log_struct,
-        backtrace_strings,
-        backtrace_size
-    };
+        logger_output_obj.OutputInfoLog(
+            this->component_name,
+            in_file_name, 
+            in_line_number, 
+            in_method_name, 
+            in_method_signature, 
+            in_message);
+    }
+    else if(!strcmp(in_log_type, "DEBUG"))
+    {
+        if(!this->IsFiner()) return;
 
-    LoggerHandler::ExecuteCriticalHandlers(critical_log_struct);
-  
-    // Freeing stack trace memory created by backtrace function
-    free(backtrace_strings); 
+        logger_output_obj.OutputDebugLog(
+            this->component_name,
+            in_file_name, 
+            in_line_number, 
+            in_method_name, 
+            in_method_signature, 
+            in_message);
+    }
+    else if(!strcmp(in_log_type, "HACK"))
+    {
+        if(!this->IsFinest()) return;
 
-    // Cleanup everything and Terminate the program
-    Logger::CleanUp();
-    exit(EXIT_FAILURE);
+        logger_output_obj.OutputHackLog(
+            this->component_name,
+            in_file_name, 
+            in_line_number, 
+            in_method_name, 
+            in_method_signature, 
+            in_message);
+    }
+    else
+    {
+        logger.LogWarning("Unsupported logging type.");
+    }
 }
 
-void Logger::ErrorLog(
-    const char* in_file_name, 
-    int in_line_number, 
-    const char* in_method_name, 
-    const char* in_method_signature,
-    std::string& unformatted_string)
+Logger::Logger(const std::string& in_app_name, 
+    const std::string& in_component_name)
 {
-    LogDB log_struct = {
-        this->group_name,
-        in_file_name,
-        in_line_number,
-        in_method_name,
-        in_method_signature,
-        unformatted_string
-    };
-
-    ErrorLogDB error_log_struct = {
-        log_struct
-    };
-
-    LoggerHandler::ExecuteErrorHandlers(error_log_struct);
-}
-
-void Logger::WarningLog(
-    const char* in_file_name, 
-    int in_line_number, 
-    const char* in_method_name, 
-    const char* in_method_signature,
-    std::string& unformatted_string)
-{
-    LogDB log_struct = {
-        this->group_name,
-        in_file_name,
-        in_line_number,
-        in_method_name,
-        in_method_signature,
-        unformatted_string
-    };
-
-    WarningLogDB warning_log_struct = {
-        log_struct
-    };
-
-    LoggerHandler::ExecuteWarningHandlers(warning_log_struct);
-}
-
-void Logger::InfoLog(
-    const char* in_file_name, 
-    int in_line_number, 
-    const char* in_method_name, 
-    const char* in_method_signature,
-    std::string& unformatted_string)
-{
-    LogDB log_struct = {
-        this->group_name,
-        in_file_name,
-        in_line_number,
-        in_method_name,
-        in_method_signature,
-        unformatted_string
-    };
-
-    InfoLogDB info_log_struct = {
-        log_struct
-    };
-
-    LoggerHandler::ExecuteInfoHandlers(info_log_struct);
-}
-
-void Logger::DebugLog(
-    const char* in_file_name, 
-    int in_line_number, 
-    const char* in_method_name, 
-    const char* in_method_signature,
-    std::string& unformatted_string)
-{
-    LogDB log_struct = {
-        this->group_name,
-        in_file_name,
-        in_line_number,
-        in_method_name,
-        in_method_signature,
-        unformatted_string
-    };
-
-    DebugLogDB debug_log_struct = {
-        log_struct
-    };
-
-    LoggerHandler::ExecuteDebugHandlers(debug_log_struct);
-}
-
-void Logger::HackLog(
-    const char* in_file_name, 
-    int in_line_number, 
-    const char* in_method_name, 
-    const char* in_method_signature,
-    std::string& unformatted_string)
-{
-    LogDB log_struct = {
-        this->group_name,
-        in_file_name,
-        in_line_number,
-        in_method_name,
-        in_method_signature,
-        unformatted_string
-    };
-
-    HackLogDB hack_log_struct = {
-        log_struct
-    };
-
-    LoggerHandler::ExecuteHackHandlers(hack_log_struct);
+    this->appname = in_app_name;
+    this->component_name = in_component_name;
+    this->component_log_level = 
+        LoggerConfig::GetLoggerConfigObject(in_app_name).GetLogLevelString(
+            in_component_name);
 }
 
 Logger::~Logger()
 {
     if(this->cache_message_logged == true)
     {
-        this->_Log(this->cache_log_type.c_str(), this->cache_file_name.c_str(),
-            this->cache_line_number, this->cache_method_name.c_str(),
-            this->cache_method_signature.c_str(), this->cache_message_string);
+        this->_Log(
+            this->cache_log_type.c_str(), 
+            this->cache_file_name.c_str(),
+            this->cache_line_number, 
+            this->cache_method_name.c_str(),
+            this->cache_method_signature.c_str(), 
+            this->cache_message_string);
+
         this->cache_message_logged = false;
     }
+}
+
+bool Logger::Init()
+{
+    // For future purpose, Does not do anything for now.
+    return true;
+}
+
+void Logger::CleanUp()
+{
+    // For future purpose, Does not do anything for now.
+}
+
+Logger* Logger::GetLoggerObject(
+    const std::string& in_app_name,
+    const std::string& in_component_name
+)
+{
+    return new Logger(in_app_name, in_component_name);
 }
 
 Logger& Logger::operator() (std::string in_log_type, const char* in_file_name,
@@ -209,9 +361,14 @@ Logger& Logger::operator() (std::string in_log_type, const char* in_file_name,
 {
     if(this->cache_message_logged == true)
     {
-        this->_Log(this->cache_log_type.c_str(), this->cache_file_name.c_str(),
-            this->cache_line_number, this->cache_method_name.c_str(),
-            this->cache_method_signature.c_str(), this->cache_message_string);
+        this->_Log(
+            this->cache_log_type.c_str(), 
+            this->cache_file_name.c_str(),
+            this->cache_line_number, 
+            this->cache_method_name.c_str(),
+            this->cache_method_signature.c_str(), 
+            this->cache_message_string);
+
         this->cache_message_logged = false;
     }
 
@@ -312,84 +469,19 @@ Logger& Logger::operator<< (std::string in_message)
     return *this;
 }
 
-Logger& Logger::CreateInstance(const std::string& in_group_name)
-{
-    if(!initialized)
-    {
-        std::string error_msg =
-            "Error in creating logger object, before running this method"
-            " 'Init' method call should be successful.";
-
-    	logger.LogError(error_msg);
-        throw std::runtime_error(error_msg);
-    }
-
-    // Checking group name string syntax.
-    if(!LoggerUtils::IsGroupNameSyntaxOk(in_group_name))
-    {
-        std::string error_msg =
-            "Group name string syntax is not correct. Group name allows only"
-            " [a-z] and . chars, Every package/module name should be seperated"
-            " with one dot . char only.";
-
-        logger.LogError(error_msg);
-	    throw std::runtime_error(error_msg);
-    }
-
-    std::map<std::string, Logger*>::iterator groupname_loggerobj_it;
-    Logger* out_logger_obj;
-
-    // Checking group name object exist in cache or not. If not creating
-    // new object and adding it into cache and returns the same.
-    if((groupname_loggerobj_it = groupname_loggerobj_map->find(
-        in_group_name)) != groupname_loggerobj_map->end())
-    {
-        if(logger.IsLogVerbose())
-	    {
-            logger.LogInfo(
-                "Logger object found in cache for group " + in_group_name);
-	    }
-        out_logger_obj = groupname_loggerobj_it->second; 
-    }
-    else
-    {
-        if(logger.IsLogVerbose())
-	    {
-            logger.LogInfo(
-                "Logger object is not present in cache for group" + \
-                in_group_name + \
-                " creating new one and adding to cache"); 
-	    }
-
-        out_logger_obj = new Logger(in_group_name);
-        out_logger_obj->group_name = in_group_name;
-        out_logger_obj->log_level = LoggerConf::GetLogLevelInt(in_group_name);
-        groupname_loggerobj_map->insert(std::pair<std::string, 
-            Logger*>(in_group_name, out_logger_obj));
-
-	    if(logger.IsLogVerbose())
-	    {
-            logger.LogInfo(
-                "Logger object created successfully and added to the cache."
-                " Log leve for group " + in_group_name + \
-                " is " + LoggerConf::GetLogLevelString(in_group_name));
-	    }
-    }
-    return *out_logger_obj;
-}
-
-
-Logger& Logger::CreateInstance(const char* in_group_name)
-{
-    const std::string group_name_str = std::string(in_group_name);
-    return CreateInstance(group_name_str);
-}
-
 bool Logger::IsFine()
 {
-    std::string log_level = LoggerConf::GetLogLevelString(this->group_name);
+    // Checking if configuration was changed at runtime.
+    if(this->component_log_level != LoggerConfig::GetLoggerConfigObject(
+        this->appname).GetLogLevelString(this->component_name))
+    {
+        this->component_log_level = LoggerConfig::GetLoggerConfigObject(
+            this->appname).GetLogLevelString(this->component_name);
+    }
 
-    if(log_level == "FINEST" || log_level == "FINER" || log_level == "FINE")
+    if(this->component_log_level == "FINEST" || 
+        this->component_log_level == "FINER" || 
+        this->component_log_level == "FINE")
     {
         return true;
     }
@@ -398,9 +490,16 @@ bool Logger::IsFine()
 
 bool Logger::IsFiner()
 {
-    std::string log_level = LoggerConf::GetLogLevelString(this->group_name);
+    // Checking if configuration was changed at runtime.
+    if(this->component_log_level != LoggerConfig::GetLoggerConfigObject(
+        this->appname).GetLogLevelString(this->component_name))
+    {
+        this->component_log_level = LoggerConfig::GetLoggerConfigObject(
+            this->appname).GetLogLevelString(this->component_name);
+    }
 
-    if(log_level == "FINEST" || log_level == "FINER")
+    if(this->component_log_level == "FINEST" || 
+        this->component_log_level == "FINER")
     {
         return true;
     }
@@ -409,70 +508,19 @@ bool Logger::IsFiner()
 
 bool Logger::IsFinest()
 {
-    std::string log_level = LoggerConf::GetLogLevelString(this->group_name);
-
-    if(log_level == "FINEST")
+    // Checking if configuration was changed at runtime.
+    if(this->component_log_level != LoggerConfig::GetLoggerConfigObject(
+        this->appname).GetLogLevelString(this->component_name))
+    {
+        this->component_log_level = LoggerConfig::GetLoggerConfigObject(
+            this->appname).GetLogLevelString(this->component_name);
+    }
+    
+    if(this->component_log_level == "FINEST")
     {
         return true;
     }
     return false;
-}
-
-void Logger::_Log(
-    const char* in_log_type, 
-    const char* in_file_name, 
-    int in_line_number, 
-    const char* in_method_name, 
-    const char* in_method_signature,
-    std::string& in_message)
-{
-    if(logger.IsLogVerbose())
-    {
-        std::string info_msg = std::string("Logging message of type ") + \
-            std::string(in_log_type) + std::string(" messge ") + in_message;
-        logger.LogInfo(info_msg);
-    }
-
-    if(!strcmp(in_log_type, "CRITICAL"))
-    {
-        this->CriticalLog(in_file_name, in_line_number, in_method_name, 
-            in_method_signature, in_message);
-    }
-    else if(!strcmp(in_log_type, "ERROR"))
-    {
-        this->ErrorLog(in_file_name, in_line_number, in_method_name,
-	        in_method_signature, in_message);
-    }
-    else if(!strcmp(in_log_type, "WARNING"))
-    {
-        this->WarningLog(in_file_name, in_line_number, in_method_name,
-	        in_method_signature, in_message);
-    }
-    else if(!strcmp(in_log_type, "INFO"))
-    {
-        if(!this->IsFine()) return;
-
-        this->InfoLog(in_file_name, in_line_number, in_method_name,
-	        in_method_signature, in_message);
-    }
-    else if(!strcmp(in_log_type, "DEBUG"))
-    {
-        if(!this->IsFiner()) return;
-
-        this->DebugLog(in_file_name, in_line_number, in_method_name,
-	        in_method_signature, in_message);
-    }
-    else if(!strcmp(in_log_type, "HACK"))
-    {
-        if(!this->IsFinest()) return;
-
-        this->HackLog(in_file_name, in_line_number, in_method_name,
-	        in_method_signature, in_message);
-    }
-    else
-    {
-        logger.LogWarning("Unsupported logging type.");
-    }
 }
 
 void Logger::Log(
@@ -519,55 +567,5 @@ void Logger::Log(
         in_method_signature, unformatted_string);
 }
 
-bool Logger::Init()
-{
-    // Logging initialization. It should be first initialization.
-    LoggerLogging::Init();
-
-    // Configuration initialization. It should be initialized before
-    // accessing any configuration info.
-    if(!LoggerConf::Init())
-    {
-        logger.LogError(
-            "Logger configuration failed. Check configuration file exist"
-            " or not and have correct syntax.");
-    	return false;
-    }
-
-    // Handlers initialization.
-    if(!LoggerHandler::Init())
-    {
-        logger.LogError("Error in setting up handler.");
-        return false;
-    }
-
-    groupname_loggerobj_map = new std::map<std::string, Logger*>();
-
-    if(logger.IsLogVerbose())
-    {
-        logger.LogInfo("Logger is initialized successfully.");
-    }
-
-    initialized = true;
-    return true;
-}
-
-void Logger::CleanUp()
-{
-    // Deleting all objects which make sure to call destructor.
-    std::map<std::string, Logger*>::iterator str_logger_map_it;
-    for(str_logger_map_it = groupname_loggerobj_map->begin();
-        str_logger_map_it != groupname_loggerobj_map->end();
-        str_logger_map_it++)
-    {
-        delete str_logger_map_it->second;
-    }
-
-    delete groupname_loggerobj_map;
-    LoggerHandler::CleanUp();
-    LoggerConf::CleanUp();
-    LoggerLogging::CleanUp();
-}
-
 }    // namespace logger
-}    // namespace cpputils
+}    // namespace cpputils **/

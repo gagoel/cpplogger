@@ -199,11 +199,11 @@ class LoggerFileHandler
         // Open log file and save file descriptor.
         // Set all log formats value.
         // @return true/false initization was successful or not.  
-        static bool Init();
+        static bool Init(const std::string& in_app_name);
 
         // @method
         // Close log file, free all heap memory, unregister all properties.
-        static void CleanUp();
+        static void CleanUp(const std::string& in_app_name);
 };
 
 }    // namespace cpplogger

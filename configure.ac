@@ -47,7 +47,7 @@ AC_SUBST(CXXFLAGS)
 
 dnl Getting configuration input
 AC_SUBST([cpplogger_handlers])
-AC_SUBST([cpplogger_config_file])
+AC_SUBST([app_default_config_file])
 AC_SUBST([cpplogger_log_file])
 
 AC_ARG_ENABLE([file-handler], [AS_HELP_STRING(
@@ -59,10 +59,21 @@ AC_ARG_ENABLE([debug], [AS_HELP_STRING(
 [AS_VAR_APPEND([CXXFLAGS],[" -g"]);\
 AS_VAR_APPEND([CXXFLAGS],[" -DCPPLOGGER_DEBUG"])], [])
 
+AC_ARG_ENABLE([cpplogger-vlogging], [AS_HELP_STRING(
+[--enable-cpplogger-vlogging], \
+[enable cpplogger verbose logging. logs info messages also.])], \
+[AS_VAR_APPEND([CXXFLAGS],[" -DCPPLOGGER_VLOGGING"])], [])
+
+AC_ARG_ENABLE([cpplogger-vvlogging], [AS_HELP_STRING(
+[--enable-cpplogger-vvlogging], \
+[enable cpplogger very verbose logging. logs info and debug messages also.])],\
+[AS_VAR_APPEND([CXXFLAGS],[" -DCPPLOGGER_VVLOGGING"])], [])
+
 AC_ARG_WITH([config-file], [AS_HELP_STRING(
-[--with-config-file], [cpplogger configuration file])], \
-[AS_VAR_SET([cpplogger_config_file], [$with_config_file])], \
-[AS_VAR_SET([cpplogger_config_file], [no])])
+[--with-app-default-config-file], \
+[default configuration file for applications])], \
+[AS_VAR_SET([app_default_config_file], [$with_config_file])], \
+[AS_VAR_SET([app_default_config_file], [no])])
 
 AC_ARG_WITH([log-file], [AS_HELP_STRING(
 [--with-log-file], [cpplogger log file])], \

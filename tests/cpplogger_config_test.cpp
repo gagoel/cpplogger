@@ -9,14 +9,15 @@
 #include <fstream>
 
 #include "cpplogger/cpplogger_utils.h"
-#include "cpplogger/cpplogger_conf.h"
+#include "cpplogger/cpplogger_config.h"
 #include "gtest/gtest.h"
 
 using namespace cpputils::cpplogger;
 
-class LoggerConfTest : public ::testing::Test, public LoggerConf
+class LoggerConfigTest : public ::testing::Test
 {
     protected :
+        std::string appname;
         std::string config_file;
         std::string cpplogger_log_file;
         std::fstream config_fstream;
@@ -72,6 +73,8 @@ class LoggerConfTest : public ::testing::Test, public LoggerConf
 
         virtual void SetUp()
         {
+            appname = "cpplogger-config-test";
+
             cpplogger_log_file = std::string(TEST_BUILD_HOME) + \
                 std::string("/cpplogger_conf_test.log");
             std::fstream cpplogger_log_fstream(cpplogger_log_file.c_str(),
@@ -107,94 +110,82 @@ class LoggerConfTest : public ::testing::Test, public LoggerConf
         }
 };
 
-TEST_F(LoggerConfTest, GetLogLevelString)
+TEST_F(LoggerConfigTest, GetLogLevelString)
 {
-    LoggerConf::SetConfigFile(this->config_file);
+    LoggerConfig::Init();
+    LoggerConfig& config_obj = LoggerConfig::GetLoggerConfigObject(
+        this->appname, this->config_file);
     
-    LoggerConf::Init();
-
-    std::map<std::string, LogLevel> str_loglevel_map = 
-        LoggerConf::GetGroups(); 
-
-    EXPECT_EQ(testcase_count, str_loglevel_map.size());
-
     EXPECT_EQ(test1_log_level, 
-        LoggerConf::GetLogLevelString(test1_package_name));
+        config_obj.GetLogLevelString(test1_package_name));
     EXPECT_EQ(test2_log_level, 
-        LoggerConf::GetLogLevelString(test2_package_name));
+        config_obj.GetLogLevelString(test2_package_name));
     EXPECT_EQ(test3_log_level, 
-        LoggerConf::GetLogLevelString(test3_package_name));
+        config_obj.GetLogLevelString(test3_package_name));
     EXPECT_EQ(test4_log_level, 
-        LoggerConf::GetLogLevelString(test4_package_name));
+        config_obj.GetLogLevelString(test4_package_name));
     EXPECT_EQ(test5_log_level, 
-        LoggerConf::GetLogLevelString(test5_package_name));
+        config_obj.GetLogLevelString(test5_package_name));
 
-    LoggerConf::CleanUp(); 
+    LoggerConfig::CleanUp(); 
 }
 
-
-TEST_F(LoggerConfTest, GetLogLevelInt)
+TEST_F(LoggerConfigTest, GetLogLevelInt)
 {
-    LoggerConf::SetConfigFile(this->config_file);
-    
-    LoggerConf::Init();
+    LoggerConfig::Init();
+    LoggerConfig& config_obj = LoggerConfig::GetLoggerConfigObject(
+        this->appname, this->config_file);
 
-    std::map<std::string, LogLevel> str_loglevel_map = 
-        LoggerConf::GetGroups(); 
-    EXPECT_EQ(testcase_count, str_loglevel_map.size());
+    EXPECT_EQ(0, config_obj.GetLogLevelInt(test1_package_name));
+    EXPECT_EQ(1, config_obj.GetLogLevelInt(test2_package_name));
+    EXPECT_EQ(2, config_obj.GetLogLevelInt(test3_package_name));
+    EXPECT_EQ(3, config_obj.GetLogLevelInt(test4_package_name));
+    EXPECT_EQ(0, config_obj.GetLogLevelInt(test5_package_name));
 
-    EXPECT_EQ(0, LoggerConf::GetLogLevelInt(test1_package_name));
-    EXPECT_EQ(1, LoggerConf::GetLogLevelInt(test2_package_name));
-    EXPECT_EQ(2, LoggerConf::GetLogLevelInt(test3_package_name));
-    EXPECT_EQ(3, LoggerConf::GetLogLevelInt(test4_package_name));
-    EXPECT_EQ(0, LoggerConf::GetLogLevelInt(test5_package_name));
-
-    LoggerConf::CleanUp(); 
+    LoggerConfig::CleanUp(); 
 }
 
-TEST_F(LoggerConfTest, GetLogLevelEnum)
+TEST_F(LoggerConfigTest, GetLogLevelEnum)
 {
-    LoggerConf::SetConfigFile(this->config_file);
-    
-    LoggerConf::Init();
+    LoggerConfig::Init();
+    LoggerConfig& config_obj = LoggerConfig::GetLoggerConfigObject(
+        this->appname, this->config_file);
 
-    std::map<std::string, LogLevel> str_loglevel_map = 
-        LoggerConf::GetGroups(); 
-    EXPECT_EQ(testcase_count, str_loglevel_map.size());
+    EXPECT_EQ(0, config_obj.GetLogLevelInt(test1_package_name));
+    EXPECT_EQ(1, config_obj.GetLogLevelInt(test2_package_name));
+    EXPECT_EQ(2, config_obj.GetLogLevelInt(test3_package_name));
+    EXPECT_EQ(3, config_obj.GetLogLevelInt(test4_package_name));
+    EXPECT_EQ(0, config_obj.GetLogLevelInt(test5_package_name));
 
-    EXPECT_EQ(DEFAULT, LoggerConf::GetLogLevelInt(test1_package_name));
-    EXPECT_EQ(FINE, LoggerConf::GetLogLevelInt(test2_package_name));
-    EXPECT_EQ(FINER, LoggerConf::GetLogLevelInt(test3_package_name));
-    EXPECT_EQ(FINEST, LoggerConf::GetLogLevelInt(test4_package_name));
-    EXPECT_EQ(DEFAULT, LoggerConf::GetLogLevelInt(test5_package_name));
-
-    LoggerConf::CleanUp(); 
+    LoggerConfig::CleanUp(); 
 }
 
-TEST_F(LoggerConfTest, IsGroupNameExists)
+TEST_F(LoggerConfigTest, IsGroupNameExists)
 {
-    LoggerConf::SetConfigFile(this->config_file);   
-    LoggerConf::Init();
+    LoggerConfig::Init();
+    LoggerConfig& config_obj = LoggerConfig::GetLoggerConfigObject(
+        this->appname, this->config_file);
 
     EXPECT_EQ(true, 
-        LoggerConf::IsGroupNameExists("cpplogger.package.test.default"));
+        config_obj.IsGroupNameExists("cpplogger.package.test.default"));
     EXPECT_EQ(true, 
-        LoggerConf::IsGroupNameExists("cpplogger.package.test.fine"));
+        config_obj.IsGroupNameExists("cpplogger.package.test.fine"));
     EXPECT_EQ(true, 
-        LoggerConf::IsGroupNameExists("cpplogger.package.test.unknown"));
+        config_obj.IsGroupNameExists("cpplogger.package.test.unknown"));
     EXPECT_TRUE(false == 
-        LoggerConf::IsGroupNameExists("cpplogger.package.test.notexist"));
+        config_obj.IsGroupNameExists("cpplogger.package.test.notexist"));
 
-    LoggerConf::CleanUp();
+    LoggerConfig::CleanUp();
 }
 
-TEST_F(LoggerConfTest, GetHandlerNameLibPathMap)
+TEST_F(LoggerConfigTest, GetHandlerNameLibPathMap)
 {
-    LoggerConf::SetConfigFile(this->config_file);
-    LoggerConf::Init();
+    LoggerConfig::Init();
+    LoggerConfig& config_obj = LoggerConfig::GetLoggerConfigObject(
+        this->appname, this->config_file);
 
     std::map<std::string, std::string> hlp_map =
-        LoggerConf::GetHandlers();
+        config_obj.GetHandlers();
 
     EXPECT_EQ(handler_test1_lib, hlp_map.find(handler_test1_name)->second);
     EXPECT_EQ(handler_test2_lib, hlp_map.find(handler_test2_name)->second);
@@ -202,46 +193,48 @@ TEST_F(LoggerConfTest, GetHandlerNameLibPathMap)
     std::string unknown_handler = "NOT FOUND IN FILE";
     EXPECT_EQ(hlp_map.end(), hlp_map.find(unknown_handler));
 
-    LoggerConf::CleanUp();
+    LoggerConfig::CleanUp();
 }
 
-TEST_F(LoggerConfTest, GetHandlerLibPath)
+TEST_F(LoggerConfigTest, GetHandlerLibPath)
 {
+    LoggerConfig::Init();
+    LoggerConfig& config_obj = LoggerConfig::GetLoggerConfigObject(
+        this->appname, this->config_file);
 
-    LoggerConf::SetConfigFile(this->config_file);
-    LoggerConf::Init();
-
-    EXPECT_EQ(handler_test1_lib, GetHandlerLibPath(
+    EXPECT_EQ(handler_test1_lib, config_obj.GetHandlerLibPath(
         handler_test1_name));
-    EXPECT_EQ(handler_test2_lib, GetHandlerLibPath(
+    EXPECT_EQ(handler_test2_lib, config_obj.GetHandlerLibPath(
         handler_test2_name));
-    EXPECT_EQ(handler_test3_lib, GetHandlerLibPath(
+    EXPECT_EQ(handler_test3_lib, config_obj.GetHandlerLibPath(
         handler_test3_name));
 
-    LoggerConf::CleanUp();
+    LoggerConfig::CleanUp();
 }
 
-TEST_F(LoggerConfTest, IsHandlerExists)
+TEST_F(LoggerConfigTest, IsHandlerExists)
 {
-    LoggerConf::SetConfigFile(this->config_file);
-    LoggerConf::Init();
+    LoggerConfig::Init();
+    LoggerConfig& config_obj = LoggerConfig::GetLoggerConfigObject(
+        this->appname, this->config_file);
 
-    EXPECT_EQ(true, LoggerConf::IsHandlerExists("file"));
-    EXPECT_EQ(true, LoggerConf::IsHandlerExists("xml"));
-    EXPECT_TRUE(false == LoggerConf::IsHandlerExists("xyz"));
+    EXPECT_EQ(true, config_obj.IsHandlerExists("file"));
+    EXPECT_EQ(true, config_obj.IsHandlerExists("xml"));
+    EXPECT_TRUE(false == config_obj.IsHandlerExists("xyz"));
 
-    LoggerConf::CleanUp();
+    LoggerConfig::CleanUp();
 }
 
-TEST_F(LoggerConfTest, SetHandler)
+TEST_F(LoggerConfigTest, SetHandler)
 {
-    LoggerConf::SetConfigFile(this->config_file);
-    LoggerConf::Init();
+    LoggerConfig::Init();
+    LoggerConfig& config_obj = LoggerConfig::GetLoggerConfigObject(
+        this->appname, this->config_file);
 
-    EXPECT_TRUE(false == LoggerConf::IsHandlerExists("xyz"));
-    LoggerConf::SetHandlerLibPath("xyz", "/temp/xyz.so");
-    EXPECT_TRUE(true == LoggerConf::IsHandlerExists("xyz"));
+    EXPECT_TRUE(false == config_obj.IsHandlerExists("xyz"));
+    config_obj.SetHandlerLibPath("xyz", "/temp/xyz.so");
+    EXPECT_TRUE(true == config_obj.IsHandlerExists("xyz"));
 
-    LoggerConf::CleanUp();
+    LoggerConfig::CleanUp();
 }
 

@@ -72,7 +72,7 @@
  message string and message variables.
 
  For each group only one Logger object will exist. When we call
- Logger::CreateInstance(group_name) Logger checks that Logger object
+ Logger::CreateInstance(component_name) Logger checks that Logger object
  exist for given group or not, if it exist return its pointer otherwise create
  new one, store it in cache and returns it.
 
@@ -192,39 +192,34 @@ can cause unusual behaviour.
 #define HACK "HACK", __FILE__, __LINE__, __func__, __pretty_func__
 #endif
 
-
-#include <execinfo.h>
-
 #include <cstdarg>
-#include <cstring>
 #include <cstdlib>
+#include <cstring>
 
 #include <iostream>
-#include <string>
 #include <map>
 #include <stdexcept>
+#include <string>
 
 #include "cpplogger/cpplogger_logging.h"
 #include "cpplogger/cpplogger_utils.h"
-#include "cpplogger/cpplogger_conf.h"
-#include "cpplogger/cpplogger_handler.h"
+#include "cpplogger/cpplogger_config.h"
+#include "cpplogger/cpplogger_output.h"
 
-namespace cpputils
-{
-namespace cpplogger
-{
+namespace cpputils { namespace cpplogger {
 
 class Logger;
+class LogManager;
 
-class Logger : public LoggerHandler
+class Logger
 {
     private:
 
         static LoggerLogging logger;
-        static std::map<std::string, Logger*>* groupname_loggerobj_map;
-        std::string group_name;
-        int log_level;
-        static bool initialized;
+
+        std::string appname;
+        std::string component_name;
+        std::string component_log_level;
 
         // Variables used for << operator logging
         std::string cache_log_type;
@@ -235,46 +230,39 @@ class Logger : public LoggerHandler
         std::string cache_message_string;
         bool cache_message_logged;  
 
+        void _Log(
+            const char* in_log_type, 
+            const char* in_file_name, 
+            int in_line_number, 
+            const char* in_method_name, 
+            const char* in_method_signature, 
+            std::string& in_message
+        ); 
+        
         // @method
         // This coustructor is called by public Init method which creates
         // new Logger object. I am putting this in private block as user
         // can not create Logger object directly.
-        // @param in_group_name - string - group name
-        Logger(const std::string& in_group_name);
-
-        void CriticalLog(const char* in_file_name, int in_line_number, 
-            const char* in_method_name, const char* in_method_signature, 
-            std::string& in_unformatted_message);
-
-        void ErrorLog(const char* in_file_name, int in_line_number, 
-            const char* in_method_name, const char* in_method_signature, 
-            std::string& in_unformatted_message);
-
-        void WarningLog(const char* in_file_name, int in_line_number, 
-            const char* in_method_name, const char* in_method_signature, 
-            std::string& in_unformatted_message);
-
-        void InfoLog(const char* in_file_name, int in_line_number, 
-            const char* in_method_name, const char* in_method_signature, 
-            std::string& in_unformatted_message);
-
-        void DebugLog(const char* in_file_name, int in_line_number, 
-            const char* in_method_name, const char* in_method_signature, 
-            std::string& in_unformatted_message);
-
-        void HackLog(const char* in_file_name, int in_line_number, 
-            const char* in_method_name, const char* in_method_signature, 
-            std::string& in_unformatted_message);
-
-        void _Log(const char* in_log_type, const char* in_file_name, 
-            int in_line_number, const char* in_method_name, 
-            const char* in_method_signature, std::string& in_message);
+        // @param in_component_name - string - group name
+        Logger(
+            const std::string& in_app_name,
+            const std::string& in_component_name
+        );
+         
     public:
 
         // @Method
         // Saves the last unsaved log if exists. 
         ~Logger();
 
+        bool Init();
+        void CleanUp();
+
+        static Logger* GetLoggerObject(
+            const std::string& in_app_name,
+            const std::string& in_component_name
+        );
+        
         // @Method
         // Initiates the << operator overloading logging. Stores the
         // log type and other info in current session. Log the message of
@@ -283,9 +271,12 @@ class Logger : public LoggerHandler
         // @param in_log_type logging type
         // @return Logger& logger object
         Logger& operator() (
-            std::string in_log_type, const char* in_file_name,
-            int in_line, const char* in_method_name, 
-            const char* in_method_sig);
+            std::string in_log_type, 
+            const char* in_file_name,
+            int in_line, 
+            const char* in_method_name, 
+            const char* in_method_sig
+        );
        
         // @Method
         // Different input paramerter types to support << overloading
@@ -317,8 +308,8 @@ class Logger : public LoggerHandler
         //
         // @param string - group name, it can not be empty.
         // @return Logger object - logger object for given group
-        static Logger& CreateInstance(const std::string& in_group_name);
-        static Logger& CreateInstance(const char* in_group_name);
+        //static Logger& CreateInstance(const std::string& in_component_name);
+        //static Logger& CreateInstance(const char* in_component_name);
      
         // @method
         // This method checks for current log level and returns true if it is
@@ -345,35 +336,51 @@ class Logger : public LoggerHandler
         // it has one input argument 'message string' and variable arguments
         // for message string variables.
         // @param string - message string
-        void Log(const char* in_log_type, const char* in_file_name, 
-            int in_line_number, const char* in_method_name, 
-            const char* in_method_signature, std::string& in_message, ...);
-        void Log(const char* in_log_type, const char* in_file_name, 
-            int in_line_number, const char* in_method_name, 
-            const char* in_method_signature, const char* in_message, ...);
+        void Log(
+            const char* in_log_type, 
+            const char* in_file_name, 
+            int in_line_number, 
+            const char* in_method_name, 
+            const char* in_method_signature, 
+            std::string& in_message, 
+            ...
+        );
         
-        // @method
-        // This is the first method application needs to call, before calling
-        // this method application can not use cpplogger. If initialization 
-        // was successful it will set 'initialized' flag to true otherwise 
-        // it will false. Means 'initialized' flag should be set to ture
-        // before procedding with cpplogger.
-        // It initializes all the data structures used in cpplogger, read
-        // the configuration file which initializes logging level for groups
-        // and set output handlers.
-        // Handlers name and corresponding library path should be set in
-        // configuration file. Handlers name should be seperated by space. 
-        // For example - If you want to enable file handler, Add line -
-        // AddHandler file /path/to/handler/shared/lib/libfile.so 
-        // @return bool - initialization was successful or not.
-        static bool Init();
+        void Log(
+            const char* in_log_type, 
+            const char* in_file_name, 
+            int in_line_number, 
+            const char* in_method_name, 
+            const char* in_method_signature, 
+            const char* in_message, 
+            ...
+        );
+};
 
-        // @method
-        // Free all memory used in logger caching. Flush all open files (
-        // logger configuration file, logger logging file etc), and close them.
+class LogManager
+{
+    private:
+
+        static LoggerLogging logger;
+        static bool initialized;
+
+        static std::string appname;
+        static std::string app_config_file;
+        static std::map<std::string, Logger*>* component_name_obj_map;
+        
+    public:
+
+        static bool Init(const std::string in_app_name);
+        static bool Init(
+            const std::string in_app_name, 
+            const std::string in_app_config_file
+        );
         static void CleanUp();
+        
+        static Logger& GetLogger(const std::string in_component_name);
 };
 
 }    // namespace logger
 }    // namespace cpputils
+
 #endif 

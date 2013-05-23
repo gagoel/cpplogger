@@ -614,7 +614,7 @@ LDFLAGS
 CXX
 RANLIB
 cpplogger_log_file
-cpplogger_config_file
+app_default_config_file
 cpplogger_handlers
 CXXFLAGS
 target_alias
@@ -660,6 +660,8 @@ ac_user_opts='
 enable_option_checking
 enable_file_handler
 enable_debug
+enable_cpplogger_vlogging
+enable_cpplogger_vvlogging
 with_config_file
 with_log_file
 '
@@ -1286,11 +1288,18 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-file-handler   enable file handler
   --enable-debug          add debugging symbols
+  --enable-cpplogger-vlogging
+                          enable cpplogger verbose logging. logs info messages
+                          also.
+  --enable-cpplogger-vvlogging
+                          enable cpplogger very verbose logging. logs info and
+                          debug messages also.
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-config-file      cpplogger configuration file
+  --with-app-default-config-file
+                          default configuration file for applications
   --with-log-file         cpplogger log file
 
 Some influential environment variables:
@@ -2042,14 +2051,28 @@ as_fn_append CXXFLAGS " -DCPPLOGGER_DEBUG"
 fi
 
 
+# Check whether --enable-cpplogger-vlogging was given.
+if test "${enable_cpplogger_vlogging+set}" = set; then :
+  enableval=$enable_cpplogger_vlogging; \
+as_fn_append CXXFLAGS " -DCPPLOGGER_VLOGGING"
+fi
+
+
+# Check whether --enable-cpplogger-vvlogging was given.
+if test "${enable_cpplogger_vvlogging+set}" = set; then :
+  enableval=$enable_cpplogger_vvlogging; \
+as_fn_append CXXFLAGS " -DCPPLOGGER_VVLOGGING"
+fi
+
+
 
 # Check whether --with-config-file was given.
 if test "${with_config_file+set}" = set; then :
   withval=$with_config_file; \
-cpplogger_config_file=$with_config_file
+app_default_config_file=$with_config_file
 else
   \
-cpplogger_config_file=no
+app_default_config_file=no
 fi
 
 

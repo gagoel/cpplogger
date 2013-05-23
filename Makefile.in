@@ -92,11 +92,11 @@ install : all
 	$(CP) $(abs_builddir)/libs/* $(libdir)/
 	$(CP) $(abs_builddir)/include/* $(includedir)/
 	$(CP) $(abs_builddir)/share/cpplogger/* $(prefix)/share/cpplogger/  	
-	$(call TOUCH,$(CPPLOGGER_CONFIG_FILE))
+	$(call TOUCH,$(APP_DEFAULT_CONFIG_FILE))
 	$(call TOUCH,$(CPPLOGGER_LOG_FILE))
-	echo "#End of cpplogger config file" > $(CPPLOGGER_CONFIG_FILE)
-	sed -i '1i $(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)' $(CPPLOGGER_CONFIG_FILE)
-	$(call TOUCH,$(CPPLOGGER_DEFAULT_APP_LOG_FILE))
+	echo "#End of cpplogger config file" > $(APP_DEFAULT_CONFIG_FILE)
+	sed -i '1i $(APP_DEFAULT_CONFIG_ENTRIES)' $(APP_DEFAULT_CONFIG_FILE)
+	$(call TOUCH,$(APP_DEFAULT_LOG_FILE))
 
 uninstall :
 	$(RM) $(libdir)/cpplogger
@@ -132,17 +132,17 @@ AUX :=
 CPPLOGGER_ENABLED_HANDLERS :=
 CPPLOGGER_CONFIG_FILE :=
 CPPLOGGER_LOG_FILE :=
-CPPLOGGER_CONFIG_DEFAULT_ENTRIES :=
-CPPLOGGER_DEFAULT_APP_LOG_FILE := \
-    $(prefix)/share/cpplogger/default_application_logs.log
+APP_DEFAULT_CONFIG_ENTRIES :=
+APP_DEFAULT_LOG_FILE := \
+    $(prefix)/share/cpplogger/app_default_logging.log
 
 # Enabled handlers
 CPPLOGGER_ENABLED_HANDLERS = @cpplogger_handlers@
 
 # cpplogger config file path
-CPPLOGGER_CONFIG_FILE = @cpplogger_config_file@
-ifeq "$(CPPLOGGER_CONFIG_FILE)" "no"
-    CPPLOGGER_CONFIG_FILE = @prefix@/share/cpplogger/cpplogger.conf
+APP_DEFAULT_CONFIG_FILE = @app_default_config_file@
+ifeq "$(APP_DEFAULT_CONFIG_FILE)" "no"
+    APP_DEFAULT_CONFIG_FILE = @prefix@/share/cpplogger/app_default_logging.conf
 endif
 
 # cpplogger log file path
@@ -152,32 +152,32 @@ ifeq "$(CPPLOGGER_LOG_FILE)" "no"
 endif    
 
 # cpplogger default entries in config file
-CPPLOGGER_CONFIG_DEFAULT_ENTRIES := \
-    $(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)\\\#AddHandler entries\n\n
+APP_DEFAULT_CONFIG_ENTRIES := \
+    $(APP_DEFAULT_CONFIG_ENTRIES)\\\#AddHandler entries\n\n
 
-CPPLOGGER_CONFIG_DEFAULT_ENTRIES := \
-    $(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)$(foreach handler,\
+APP_DEFAULT_CONFIG_ENTRIES := \
+    $(APP_DEFAULT_CONFIG_ENTRIES)$(foreach handler,\
     $(CPPLOGGER_ENABLED_HANDLERS),AddHandler $(handler) \
     $(prefix)/lib/cpplogger/handlers/$(handler)/lib$(handler)_handler.so\n)\n\n
 
-CPPLOGGER_CONFIG_DEFAULT_ENTRIES := \
-    $(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)\\\#Handler property entries\n\n
+APP_DEFAULT_CONFIG_ENTRIES := \
+    $(APP_DEFAULT_CONFIG_ENTRIES)\\\#Handler property entries\n\n
 
 # cpplogger LogFile default entry if file handler enabled
 ifneq "$(findstring file,$(CPPLOGGER_ENABLED_HANDLERS))" ""
-CPPLOGGER_CONFIG_DEFAULT_ENTRIES := \
-$(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)LogFile $(CPPLOGGER_DEFAULT_APP_LOG_FILE)\n\n
+APP_DEFAULT_CONFIG_ENTRIES := \
+$(APP_DEFAULT_CONFIG_ENTRIES)LogFile $(APP_DEFAULT_LOG_FILE)\n\n
 endif
 
-CPPLOGGER_CONFIG_DEFAULT_ENTRIES := \
-    $(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)\\\#Package log level entries\n\n
+APP_DEFAULT_CONFIG_ENTRIES := \
+    $(APP_DEFAULT_CONFIG_ENTRIES)\\\#Package log level entries\n\n
 
 print_config_variables :
 	@echo CPPLOGGER_ENABLED_HANDLERS $(CPPLOGGER_ENABLED_HANDLERS)
 	@echo CPPLOGGER_CONFIG_FILE $(CPPLOGGER_CONFIG_FILE)
 	@echo CPPLOGGER_LOG_FILE $(CPPLOGGER_LOG_FILE)
-	@echo CPPLOGGER_CONFIG_DEFAULT_ENTRIES \
-    $(CPPLOGGER_CONFIG_DEFAULT_ENTRIES)
+	@echo APP_DEFAULT_CONFIG_ENTRIES \
+    $(APP_DEFAULT_CONFIG_ENTRIES)
 
 ########################################################
 # cpplogger build
@@ -223,7 +223,7 @@ endif
 
 # cpplogger libs and preprocessor
 CPPLOGGER_PREPROCESSOR = \
-    -DCPPLOGGER_CONFIG_FILE="\"$(CPPLOGGER_CONFIG_FILE)\"" \
+    -DAPP_DEFAULT_CONFIG_FILE="\"$(APP_DEFAULT_CONFIG_FILE)\"" \
     -DCPPLOGGER_LOG_FILE="\"$(CPPLOGGER_LOG_FILE)\""
 
 # cpplogger targets
@@ -561,22 +561,23 @@ abs_top_examples_builddir = $(abs_builddir)/share/cpplogger/examples
 CPPLOGGER_EXAMPLES_SRCS :=
 CPPLOGGER_EXAMPLES_EXEC :=
 CPPLOGGER_EXAMPLES_FLAGS := \
-    -DCPPLOGGER_DEFAULT_APP_LOG_FILE="\"$(CPPLOGGER_DEFAULT_APP_LOG_FILE)\"" \
+    -DAPP_DEFAULT_LOG_FILE="\"$(APP_DEFAULT_LOG_FILE)\"" \
+    -DAPP_DEFAULT_CONFIG_FILE="\"$(APP_DEFAULT_CONFIG_FILE)\"" \
     -I$(includedir) -I$(abs_cpplogger_build_includedir) \
     -L$(libdir)/cpplogger -L$(abs_cpplogger_build_libdir) \
     -Wl,-rpath=$(libdir)/cpplogger
 
 CPPLOGGER_EXAMPLES_SRCS += \
-    $(wildcard $(abs_top_examples_srcdir)/*_example.cpp)
+    $(wildcard $(abs_top_examples_srcdir)/*.cpp)
 
 CPPLOGGER_EXAMPLES_EXEC += \
     $(addprefix $(abs_top_examples_builddir)/, \
-    $(notdir $(CPPLOGGER_EXAMPLES_SRCS:.cpp=.out)))
+    $(notdir $(CPPLOGGER_EXAMPLES_SRCS:%.cpp=%)))
 
 # Examples targests
 cpplogger_examples_build : $(CPPLOGGER_EXAMPLES_EXEC)
 
-$(abs_top_examples_builddir)/%.out : $(abs_top_examples_srcdir)/%.cpp
+$(abs_top_examples_builddir)/% : $(abs_top_examples_srcdir)/%.cpp
 
 	$(MKDIR) $(abs_top_examples_builddir)
 	$(CXX) $(CXXFLAGS) \
