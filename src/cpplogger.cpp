@@ -227,13 +227,13 @@ void Logger::_Log(
     std::string& in_message
 )
 {
-    if(logger.IsLogVerbose())
+    if(logger.IsLogVVerbose())
     {
         std::string info_msg = 
             std::string("Logging message of type ") + \
             std::string(in_log_type) + \
             std::string(" messge ") + in_message;
-        logger.LogInfo(info_msg);
+        logger.LogDebug(info_msg);
     }
 
     LoggerOutput& logger_output_obj = 
@@ -307,7 +307,7 @@ void Logger::_Log(
     }
     else
     {
-        logger.LogWarning("Unsupported logging type.");
+        logger.LogDebug("Unsupported logging type.");
     }
 }
 
@@ -319,10 +319,13 @@ Logger::Logger(const std::string& in_app_name,
     this->component_log_level = 
         LoggerConfig::GetLoggerConfigObject(in_app_name).GetLogLevelString(
             in_component_name);
+    this->cache_message_logged = false;
 }
 
 Logger::~Logger()
 {
+    logger.LogInfo("Destructing the Logger object.");
+
     if(this->cache_message_logged == true)
     {
         this->_Log(

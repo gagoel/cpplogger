@@ -90,6 +90,10 @@ install : all
 	$(MKDIR) $(prefix)/share/cpplogger
 
 	$(CP) $(abs_builddir)/libs/* $(libdir)/
+	-rm -rf $(libdir)/libcpplogger.a
+	-rm -rf $(libdir)/libcpplogger.so
+	ln -s $(libdir)/cpplogger/libcpplogger.a $(libdir)/libcpplogger.a
+	ln -s $(libdir)/cpplogger/libcpplogger.so $(libdir)/libcpplogger.so
 	$(CP) $(abs_builddir)/include/* $(includedir)/
 	$(CP) $(abs_builddir)/share/cpplogger/* $(prefix)/share/cpplogger/  	
 	$(call TOUCH,$(APP_DEFAULT_CONFIG_FILE))
