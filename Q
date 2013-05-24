@@ -1,0 +1,16 @@
+Q1. What will happen when we will run below code.
+
+LogManager::Init(appname, conffile);
+Logger& logger = LogManager::GetLogger(compname);
+logger(ERROR) << "Error message";
+
+LogManager::Init(appname1, conffile1);
+logger(INFO) << "INFO message";
+
+LogManager::CleanUp();
+
+Ans.
+Second LogManager Init call does not do anything 
+here. To make second call of Init or need to 
+change in Init, you first need to call CleanUp
+method.

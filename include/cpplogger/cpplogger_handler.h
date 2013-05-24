@@ -112,18 +112,6 @@ typedef struct _output_handler
     void (*PrintHackLog) (const HackLogDB& hack_log_db);
 }OutputHandler;
 
-class LoggerHandler
-{
-    private :
-   
-
-    public :
-
-
-        
-
-};
-
 }    // namespace cpplogger
 }    // namespace cpputils
 #endif
