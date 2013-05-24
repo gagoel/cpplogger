@@ -589,4 +589,4 @@ void Logger::Log(
 }
 
 }    // namespace logger
-}    // namespace cpputils **/
+}    // namespace cpputils
