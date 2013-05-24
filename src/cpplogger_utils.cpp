@@ -61,7 +61,7 @@ bool LoggerUtils::IsGroupNameSyntaxOk(const std::string& in_group_name)
             // two '.' char can not come together.
             if(in_group_name.at(idx+1) == '.') return false;
         }
-        else if(!isalnum(ch)) 
+        else if(!(isalnum(ch) || ch == '_' || ch == '-')) 
         {
             return false;
         }
