@@ -211,7 +211,33 @@ namespace cpputils { namespace cpplogger {
 class Logger;
 class LogManager;
 
-class Logger
+class LogManager
+{
+    private:
+
+        static LoggerLogging logger;
+        static bool initialized;
+
+        static std::string appname;
+        static std::string app_config_file;
+
+    protected:
+
+        static std::map<std::string, Logger*>* component_name_obj_map;
+        
+    public:
+
+        static bool Init(const std::string in_app_name);
+        static bool Init(
+            const std::string in_app_name, 
+            const std::string in_app_config_file
+        );
+        static void CleanUp();
+        
+        static Logger& GetLogger(const std::string in_component_name);
+};
+
+class Logger : public LogManager
 {
     private:
 
@@ -238,6 +264,15 @@ class Logger
             const char* in_method_signature, 
             std::string& in_message
         ); 
+       
+        // @method
+        // Flushes all previous logged message for all components.
+        // It uses LogManager::component_name_obj_map to get info about
+        // current logger objects.
+        // If we are not calling this method before logging new message
+        // logs order can change for '<<' operator logging.
+        // It is expensive as it checks for all logger object.
+        void _FlushLogs();
         
         // @method
         // This coustructor is called by public Init method which creates
@@ -355,29 +390,6 @@ class Logger
             const char* in_message, 
             ...
         );
-};
-
-class LogManager
-{
-    private:
-
-        static LoggerLogging logger;
-        static bool initialized;
-
-        static std::string appname;
-        static std::string app_config_file;
-        static std::map<std::string, Logger*>* component_name_obj_map;
-        
-    public:
-
-        static bool Init(const std::string in_app_name);
-        static bool Init(
-            const std::string in_app_name, 
-            const std::string in_app_config_file
-        );
-        static void CleanUp();
-        
-        static Logger& GetLogger(const std::string in_component_name);
 };
 
 }    // namespace logger

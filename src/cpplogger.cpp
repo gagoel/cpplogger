@@ -311,6 +311,39 @@ void Logger::_Log(
     }
 }
 
+void Logger::_FlushLogs()
+{
+    if(LogManager::component_name_obj_map == NULL)
+    {
+        std::string error_msg =
+            "component_name_obj_map is not initialized yet. you need to "
+            "call LogManager::Init() method before using it.";
+        logger.LogError(error_msg);
+        return;
+    }
+
+    std::map<std::string, Logger*>::iterator str_logger_it;
+    for(str_logger_it = LogManager::component_name_obj_map->begin();
+        str_logger_it != LogManager::component_name_obj_map->end();
+        str_logger_it++)
+    {
+        Logger* logger_obj = str_logger_it->second;
+
+        if(logger_obj->cache_message_logged == true)
+        {
+            logger_obj->_Log(
+                logger_obj->cache_log_type.c_str(), 
+                logger_obj->cache_file_name.c_str(),
+                logger_obj->cache_line_number, 
+                logger_obj->cache_method_name.c_str(),
+                logger_obj->cache_method_signature.c_str(), 
+                logger_obj->cache_message_string);
+
+            logger_obj->cache_message_logged = false;
+        }
+    }
+}
+
 Logger::Logger(const std::string& in_app_name, 
     const std::string& in_component_name)
 {
@@ -325,19 +358,7 @@ Logger::Logger(const std::string& in_app_name,
 Logger::~Logger()
 {
     logger.LogInfo("Destructing the Logger object.");
-
-    if(this->cache_message_logged == true)
-    {
-        this->_Log(
-            this->cache_log_type.c_str(), 
-            this->cache_file_name.c_str(),
-            this->cache_line_number, 
-            this->cache_method_name.c_str(),
-            this->cache_method_signature.c_str(), 
-            this->cache_message_string);
-
-        this->cache_message_logged = false;
-    }
+    _FlushLogs();
 }
 
 bool Logger::Init()
@@ -362,18 +383,8 @@ Logger* Logger::GetLoggerObject(
 Logger& Logger::operator() (std::string in_log_type, const char* in_file_name,
     int in_line, const char* in_method_name, const char* in_method_sig)
 {
-    if(this->cache_message_logged == true)
-    {
-        this->_Log(
-            this->cache_log_type.c_str(), 
-            this->cache_file_name.c_str(),
-            this->cache_line_number, 
-            this->cache_method_name.c_str(),
-            this->cache_method_signature.c_str(), 
-            this->cache_message_string);
-
-        this->cache_message_logged = false;
-    }
+    // Flushing logging before creating new one.
+    _FlushLogs();
 
     if(logger.IsLogVerbose())
     {
@@ -382,6 +393,7 @@ Logger& Logger::operator() (std::string in_log_type, const char* in_file_name,
         logger.LogInfo(info_msg); 
     }
 
+    // Saving current << operator logging type info.
     this->cache_log_type = in_log_type;
     this->cache_file_name = std::string(in_file_name);
     this->cache_line_number = in_line;
@@ -535,6 +547,9 @@ void Logger::Log(
     std::string& in_message, 
     ...)
 {
+    // Flushing logging before creating new one.
+    _FlushLogs();
+    
     va_list log_vargs_list;
     va_start(log_vargs_list, in_message);
 
@@ -557,6 +572,9 @@ void Logger::Log(
     const char* in_message, 
     ...)
 {
+    // Flushing logging before creating new one.
+    _FlushLogs();
+    
     std::string in_message_str = std::string(in_message);
     va_list log_vargs_list;
     va_start(log_vargs_list, in_message);
