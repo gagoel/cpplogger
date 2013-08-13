@@ -112,8 +112,27 @@ class LoggerFileHandlerTest : public ::testing::Test
         remove(cpplogger_log_file.c_str());
     }
 
-    std::string GetLogFileLine();
+    std::string GetLogFileFirstLine();
+    void ClearLogFileContent();
 };
+
+std::string LoggerFileHandlerTest::GetLogFileFirstLine()
+{
+    int max_line_length = 1000;
+    char logged_str[max_line_length];
+    std::fstream *log_fstream = new std::fstream();
+    log_fstream->open(this->log_file, std::fstream::in);
+    log_fstream->getline(logged_str, max_line_length);
+    log_fstream->close();
+    return std::string(logged_str); 
+}
+
+void LoggerFileHandlerTest::ClearLogFileContent()
+{
+    std::fstream *log_fstream = new std::fstream();
+    log_fstream->open(this->log_file, std::fstream::out | std::fstream::trunc);
+    log_fstream->close();
+}
 
 TEST_F(LoggerFileHandlerTest, ParseLogFormat)
 {
@@ -152,17 +171,6 @@ TEST_F(LoggerFileHandlerTest, ParseLogFormat)
     LoggerConfig::CleanUp();
 }
 
-std::string LoggerFileHandlerTest::GetLogFileLine()
-{
-    int max_line_length = 1000;
-    char logged_str[max_line_length];
-    std::fstream *log_fstream;
-    LoggerFileHandler::GetLogFileStream(&log_fstream);
-    log_fstream->seekg(0, std::fstream::beg);
-    log_fstream->getline(logged_str, max_line_length);
-    return std::string(logged_str); 
-}
-
 TEST_F(LoggerFileHandlerTest, LogFileTests)
 {
     std::string temp_log_file = std::string(TEST_BUILD_HOME) + \
@@ -180,9 +188,10 @@ TEST_F(LoggerFileHandlerTest, LogFileTests)
     LoggerFileHandler::SetLogFileName(temp_log_file);
 
     char result_buff[100];
-    std::fstream *find_log_stream;
-    LoggerFileHandler::GetLogFileStream(&find_log_stream);
+    std::fstream *find_log_stream = new std::fstream();
+    find_log_stream->open(temp_log_file.c_str(), std::fstream::in);
     find_log_stream->getline(result_buff, 100);
+    find_log_stream->close();
 
     EXPECT_EQ(temp_log_text, std::string(result_buff));
 
@@ -256,6 +265,7 @@ TEST_F(LoggerFileHandlerTest, PrintCriticalLog)
     LoggerConfig::Init();
     LoggerConfig::GetLoggerConfigObject(this->app_name, this->config_file);
     LoggerFileHandler::Init(this->app_name);
+    LoggerFileHandlerTest::ClearLogFileContent();
     LoggerFileHandler::SetLogFileName(this->log_file);
     LoggerFileHandler::SetLogFormat("LogCriticalFormat", test1_log_format);
 
@@ -273,7 +283,7 @@ TEST_F(LoggerFileHandlerTest, PrintCriticalLog)
         open_bracket + this->test1_method_sig + close_bracket + space +
         open_bracket + this->test1_message + close_bracket;
     
-    EXPECT_EQ(expected_string, LoggerFileHandlerTest::GetLogFileLine());
+    EXPECT_EQ(expected_string, LoggerFileHandlerTest::GetLogFileFirstLine());
 
     // No need to call LoggerFileHandler cleanup as it was called with
     // PrintCriticalLog method
@@ -286,6 +296,7 @@ TEST_F(LoggerFileHandlerTest, PrintErrorLog)
     LoggerConfig::Init();
     LoggerConfig::GetLoggerConfigObject(this->app_name, this->config_file);
     LoggerFileHandler::Init(this->app_name);
+    LoggerFileHandlerTest::ClearLogFileContent();
     LoggerFileHandler::SetLogFileName(this->log_file);
     LoggerFileHandler::SetLogFormat("LogErrorFormat", test1_log_format);
 
@@ -303,7 +314,7 @@ TEST_F(LoggerFileHandlerTest, PrintErrorLog)
         open_bracket + this->test1_method_sig + close_bracket + space +
         open_bracket + this->test1_message + close_bracket;
     
-    EXPECT_EQ(expected_string, GetLogFileLine());
+    EXPECT_EQ(expected_string, GetLogFileFirstLine());
 
     LoggerFileHandler::CleanUp(this->app_name);
     LoggerConfig::CleanUp();
@@ -314,6 +325,7 @@ TEST_F(LoggerFileHandlerTest, PrintWarningLog)
     LoggerConfig::Init();
     LoggerConfig::GetLoggerConfigObject(this->app_name, this->config_file);
     LoggerFileHandler::Init(this->app_name);
+    LoggerFileHandlerTest::ClearLogFileContent();
     LoggerFileHandler::SetLogFileName(this->log_file);
     LoggerFileHandler::SetLogFormat("LogWarningFormat", test1_log_format);
 
@@ -331,7 +343,7 @@ TEST_F(LoggerFileHandlerTest, PrintWarningLog)
         open_bracket + this->test1_method_sig + close_bracket + space +
         open_bracket + this->test1_message + close_bracket;
     
-    EXPECT_EQ(expected_string, GetLogFileLine());
+    EXPECT_EQ(expected_string, GetLogFileFirstLine());
 
     LoggerFileHandler::CleanUp(this->app_name);
     LoggerConfig::CleanUp();
@@ -342,6 +354,7 @@ TEST_F(LoggerFileHandlerTest, PrintInfoLog)
     LoggerConfig::Init();
     LoggerConfig::GetLoggerConfigObject(this->app_name, this->config_file);
     LoggerFileHandler::Init(this->app_name);
+    LoggerFileHandlerTest::ClearLogFileContent();
     LoggerFileHandler::SetLogFileName(this->log_file);
     LoggerFileHandler::SetLogFormat("LogInfoFormat", test1_log_format);
 
@@ -359,7 +372,7 @@ TEST_F(LoggerFileHandlerTest, PrintInfoLog)
         open_bracket + this->test1_method_sig + close_bracket + space +
         open_bracket + this->test1_message + close_bracket;
     
-    EXPECT_EQ(expected_string, GetLogFileLine());
+    EXPECT_EQ(expected_string, GetLogFileFirstLine());
 
     LoggerFileHandler::CleanUp(this->app_name);
     LoggerConfig::CleanUp();
@@ -370,6 +383,7 @@ TEST_F(LoggerFileHandlerTest, PrintDebugLog)
     LoggerConfig::Init();
     LoggerConfig::GetLoggerConfigObject(this->app_name, this->config_file);
     LoggerFileHandler::Init(this->app_name);
+    LoggerFileHandlerTest::ClearLogFileContent();
     LoggerFileHandler::SetLogFileName(this->log_file);
     LoggerFileHandler::SetLogFormat("LogDebugFormat", test1_log_format);
 
@@ -387,7 +401,7 @@ TEST_F(LoggerFileHandlerTest, PrintDebugLog)
         open_bracket + this->test1_method_sig + close_bracket + space +
         open_bracket + this->test1_message + close_bracket;
     
-    EXPECT_EQ(expected_string, GetLogFileLine());
+    EXPECT_EQ(expected_string, GetLogFileFirstLine());
 
     LoggerFileHandler::CleanUp(this->app_name);
     LoggerConfig::CleanUp();
@@ -398,6 +412,7 @@ TEST_F(LoggerFileHandlerTest, PrintHackLog)
     LoggerConfig::Init();
     LoggerConfig::GetLoggerConfigObject(this->app_name, this->config_file);
     LoggerFileHandler::Init(this->app_name);
+    LoggerFileHandlerTest::ClearLogFileContent();
     LoggerFileHandler::SetLogFileName(this->log_file);
     LoggerFileHandler::SetLogFormat("LogHackFormat", test1_log_format);
 
@@ -415,10 +430,9 @@ TEST_F(LoggerFileHandlerTest, PrintHackLog)
         open_bracket + this->test1_method_sig + close_bracket + space +
         open_bracket + this->test1_message + close_bracket;
     
-    EXPECT_EQ(expected_string, GetLogFileLine());
+    EXPECT_EQ(expected_string, GetLogFileFirstLine());
 
     LoggerFileHandler::CleanUp(this->app_name);
     LoggerConfig::CleanUp();
 }
-
 #endif

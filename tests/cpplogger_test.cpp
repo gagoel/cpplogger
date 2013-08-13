@@ -111,14 +111,14 @@ std::string LoggerTest::GetLogFileLine(int line_num)
 {
     int max_line_length = 1000;
     char logged_str[max_line_length];
-    std::fstream *log_fstream;
-    LoggerFileHandler::GetLogFileStream(&log_fstream);
-    log_fstream->seekg(0, std::fstream::beg);
+    std::fstream *log_fstream = new std::fstream();
+    log_fstream->open(log_file, std::fstream::in);
     for(int idx = 1; idx <= line_num; idx++)
     {
         log_fstream->getline(logged_str, max_line_length);
         if(log_fstream->fail()) return "";
     }
+    log_fstream->close();
     return std::string(logged_str); 
 }
 #endif

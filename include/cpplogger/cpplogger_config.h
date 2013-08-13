@@ -37,6 +37,7 @@
 #include <utility>
 #include <algorithm>
 #include <fstream>
+#include <sstream>
 
 #include "cpplogger/cpplogger_logging.h"
 #include "cpplogger/cpplogger_utils.h"

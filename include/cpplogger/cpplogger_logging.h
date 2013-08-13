@@ -55,11 +55,11 @@ class LoggerLogging
 {
     private :
 
+        static bool initialized;
         static std::string logging_file_name;
         static std::fstream *logging_file_stream;
         static bool verbose;
         static bool vverbose;
-        static bool initialized;
 
         std::string package_name;
 

@@ -92,8 +92,8 @@ void LoggerFileHandler::SetLogFileName(const std::string& in_log_file)
         log_file_stream = new std::fstream();
 
         log_file_name = in_log_file;
-        // Opening new stream.
-        log_file_stream->open(in_log_file.c_str(), std::fstream::in | \
+        // Opening new stream for writing.
+        log_file_stream->open(in_log_file.c_str(), 
             std::fstream::out | std::fstream::app);
 
         if(log_file_stream->good() == false)
@@ -113,6 +113,7 @@ bool LoggerFileHandler::GetLogFileStream(std::fstream** in_log_file_stream)
         logger.LogError(
             "Init was not called yet. Init needs to be called before getting"
             " log file stream from file handler.");
+        logger.LogDebug("stack trace");
         return false;
     }
 
@@ -120,6 +121,7 @@ bool LoggerFileHandler::GetLogFileStream(std::fstream** in_log_file_stream)
     {
         logger.LogError("log file stream does not exists or was not created"
             " successful.");
+        logger.LogDebug("stack trace");
         return false;
     }
 
@@ -290,6 +292,8 @@ bool LoggerFileHandler::IsValidLogFileName(const std::string& in_log_file)
 
 void LoggerFileHandler::PrintCriticalLog(const CriticalLogDB& critical_log_db)
 {
+    logger.LogInfo("Printing the critical log.");
+
     log_format_specifiers_map->clear();
     SetCommonFormatSpecifiers(critical_log_db.common_properties);
     SetFormatSpecifier("type", "CRITICAL");
@@ -297,10 +301,12 @@ void LoggerFileHandler::PrintCriticalLog(const CriticalLogDB& critical_log_db)
     std::string parsed_message;
     ParseLogFormat(parsed_message, GetLogFormat("LogCriticalFormat"));
 
+    // Print message and stack trace to logging file and std error console.
     if(log_file_stream->good())
     {
         *log_file_stream << parsed_message;
         *log_file_stream << "\n";
+        std::cerr << parsed_message << std::endl;
         log_file_stream->flush();
 
         // Adding backtrace.
@@ -308,6 +314,7 @@ void LoggerFileHandler::PrintCriticalLog(const CriticalLogDB& critical_log_db)
         {
             *log_file_stream << critical_log_db.backtrace_strings[i];
             *log_file_stream << "\n";
+            std::cerr << critical_log_db.backtrace_strings[i] << std::endl;
             log_file_stream->flush();
         }
     }
@@ -499,8 +506,8 @@ bool LoggerFileHandler::Init(const std::string& in_app_name)
             }
         }
 
-        // Opening log file.
-        log_file_stream->open(GetLogFileName(), std::fstream::in | \
+        // Opening log file for writing.
+        log_file_stream->open(GetLogFileName(), 
             std::fstream::out | std::fstream::app);
 
         if(log_file_stream->fail())

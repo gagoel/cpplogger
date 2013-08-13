@@ -195,10 +195,12 @@ can cause unusual behaviour.
 #include <cstdarg>
 #include <cstdlib>
 #include <cstring>
+#include <csignal>
 
 #include <iostream>
 #include <map>
 #include <stdexcept>
+#include <exception>
 #include <string>
 
 #include "cpplogger/cpplogger_logging.h"
@@ -210,6 +212,10 @@ namespace cpputils { namespace cpplogger {
 
 class Logger;
 class LogManager;
+
+typedef enum {
+    end
+}LoggerManipulator;
 
 class LogManager
 {
@@ -227,6 +233,9 @@ class LogManager
         
     public:
 
+        // Signal callback methods.
+        static void signal_callback_sigsegv(int in_signal_number);
+        
         static bool Init(const std::string in_app_name);
         static bool Init(
             const std::string in_app_name, 
@@ -330,7 +339,21 @@ class Logger : public LogManager
         Logger& operator<< (long double in_message);
         Logger& operator<< (const char* in_message);
         Logger& operator<< (const std::string& in_message);
-        Logger& operator<< (std::string in_message);
+
+        // @method
+        // You can use different manipulators for different actions
+        // end manipulator -
+        // Flush the message for current object, clear the message string,
+        // return the current object rererence. 
+        // Use this manipulator if and only if require. As example we need to
+        // use it in critical logging. 
+        // logger(CRITICAL) << "message string" << cpputils::cpplogger::end;
+        // critical call terminate the program. << operator logging happens
+        // in second log call so if we will not use this method in critical
+        // logging program will not terminate until next logging, which is
+        // not the right behaviour.
+        // Always use this at the end if you are doing critical logging.
+        Logger& operator<< (LoggerManipulator in_manipulator);
 
         // @method
         // This method creates cpplogger instance which we use to log messages.

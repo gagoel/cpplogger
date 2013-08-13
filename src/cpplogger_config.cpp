@@ -143,22 +143,71 @@ LoggerConfig::LogLevel LoggerConfig::_GetLogLevelEnum(
     const std::string& in_group_name
 )
 {
-    std::map<std::string, LogLevel>::iterator str_loglevel_map_it;
-
-    LoggerConfig::LogLevel found_level;
-    if((str_loglevel_map_it = this->groupname_loglevel_map->find(
-        in_group_name)) == groupname_loglevel_map->end())
+    if(LoggerUtils::IsGroupNameSyntaxOk(in_group_name) == false)
     {
-        found_level = DEFAULT;
+        logger.LogError("Group name syntax is not ok.");
+        return DEFAULT;
     }
-    found_level = str_loglevel_map_it->second; 
 
-    logger.LogInfo(
-        "Got log level for input group name."
-        "Group name is " + in_group_name +
-        "Found log level is " + this->_ConvertLogLevelEnumToString(
-        found_level));
-    return found_level;
+    // We are searching for group name in groupname_loglevel_map
+    // Search starts from top to down hirearchy fashion.
+    // If input groupname is package1.package2.class
+    // Search happens in below order and will return loglevel
+    // for first match.
+    // package1
+    // package1.package2
+    // package1.package2.class
+    // If no match found it will return DEFAULT value.
+
+    std::istringstream iss(in_group_name);
+
+    // Getting first component name.
+    std::string previous_comp, current_comp;
+    std::getline(iss, previous_comp, '.');
+
+    std::map<std::string, LogLevel>::iterator str_loglevel_map_it;
+    while(std::getline(iss, current_comp, '.'))
+    {
+        if((str_loglevel_map_it = this->groupname_loglevel_map->find(
+            previous_comp)) != groupname_loglevel_map->end())
+        {
+            std::string info_msg = 
+                "Log Level found for given package "
+                "Package name " + in_group_name +
+                "Log Level " + 
+                this->_ConvertLogLevelEnumToString(
+                  str_loglevel_map_it->second);
+            logger.LogInfo(info_msg);
+
+            return str_loglevel_map_it->second; 
+        }
+        
+        previous_comp = previous_comp + "." + current_comp;
+    }
+
+    // Searching in last package name.
+    if((str_loglevel_map_it = this->groupname_loglevel_map->find(
+        previous_comp)) != groupname_loglevel_map->end())
+    {
+        std::string info_msg = 
+            "Log Level found for given package "
+            "Package name " + in_group_name +
+            "Log Level " + 
+            this->_ConvertLogLevelEnumToString(
+              str_loglevel_map_it->second);
+        logger.LogInfo(info_msg);
+        return str_loglevel_map_it->second; 
+    }
+     
+    // Returning default log level if not found in map. 
+    std::string info_msg = 
+        "Log Level found for given package "
+        "Package name " + in_group_name +
+        "Log Level " + 
+        this->_ConvertLogLevelEnumToString(DEFAULT);
+    logger.LogInfo(info_msg);
+
+    return DEFAULT;
 }
 
 
@@ -447,6 +496,8 @@ bool LoggerConfig::_SaveConfiguration()
 LoggerConfig::LoggerConfig(const std::string in_app_name,
     const std::string in_app_config_file)
 {
+    logger.LogDebug("Running LoggerConfig Constructor.");
+
     this->appname = in_app_name;
     this->config_file_name = in_app_config_file;
     
@@ -467,6 +518,8 @@ LoggerConfig::~LoggerConfig()
     delete this->handler_name_libpath_map;
     delete this->property_name_value_map;
     delete this->property_name_validator_map;
+
+    logger.LogInfo("LoggerConfig object destructed successfully.");
 }
 
 bool LoggerConfig::Init()
@@ -497,6 +550,8 @@ void LoggerConfig::CleanUp()
 
         LoggerLogging::CleanUp();
         initialized = false;
+
+        logger.LogInfo("logger configuration cleaned up successfully.");
     }
 }
 
@@ -633,30 +688,16 @@ bool LoggerConfig::SetLogLevelInt(
 
 std::string LoggerConfig::GetLogLevelString(const std::string& in_group_name)
 {
-    if(IsGroupNameExists(in_group_name))
-    {
-        LogLevel log_level = this->_GetLogLevelEnum(in_group_name);
-        return _ConvertLogLevelEnumToString(log_level);
-    }
-
     // Returns the default log level if it was not set.
-    // We are not going to set it because it may write to configuration
-    // file which we don't want here.
-    return "DEFAULT";
+    LogLevel log_level = this->_GetLogLevelEnum(in_group_name);
+    return _ConvertLogLevelEnumToString(log_level);
 }
 
 int LoggerConfig::GetLogLevelInt(const std::string& in_group_name)
 {
-    if(IsGroupNameExists(in_group_name))
-    {
-        LogLevel log_level = _GetLogLevelEnum(in_group_name);
-        return _ConvertLogLevelEnumToInt(log_level);
-    }
-    
     // Returns the default log level if it was not set.
-    // We are not going to set it because it may write to configuration
-    // file which we don't want here.
-    return 0;
+    LogLevel log_level = _GetLogLevelEnum(in_group_name);
+    return _ConvertLogLevelEnumToInt(log_level);
 }
 
 const std::map<std::string, LoggerConfig::LogLevel>& LoggerConfig::GetGroups()

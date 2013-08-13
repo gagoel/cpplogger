@@ -30,17 +30,41 @@ std::string LogManager::appname = "";
 std::string LogManager::app_config_file = APP_DEFAULT_CONFIG_FILE;
 std::map<std::string, Logger*>* LogManager::component_name_obj_map = NULL;
 
+void LogManager::signal_callback_sigsegv(int in_signal_number)
+{
+    std::cout << "Segmentation fault occured." << std::endl;
+    
+    // Printing stack trace.
+    const int max_backtrace_len = 50;
+    void *backtrace_buff[max_backtrace_len];
+    size_t backtrace_size;
+    char **backtrace_strings;
+
+    backtrace_size = backtrace(backtrace_buff, max_backtrace_len);
+    backtrace_strings = backtrace_symbols(backtrace_buff, backtrace_size);
+    
+    for(uint32_t i = 0; i < backtrace_size; i++)
+    {
+       std::cout << backtrace_strings[i] << std::endl;
+    }
+
+    // Exiting as it is critical signal
+    exit(in_signal_number);
+}
+
 bool LogManager::Init(
     const std::string in_app_name,
     const std::string in_app_config_file
 )
 {
+    // Adding singals callback methods.
+    signal(SIGSEGV, signal_callback_sigsegv);
+
     if(LogManager::initialized == false)
     {
         // Logging initialization. It should be first initialization.
-        logger.LogInfo("Initializing log manager.");
-
         LoggerLogging::Init();
+        logger.LogInfo("Initialized log manager.");
 
         if(in_app_name.size() == 0 || in_app_config_file.size() == 0)
         {
@@ -102,12 +126,12 @@ bool LogManager::Init(
         component_name_obj_map = new std::map<std::string, Logger*>();
 
         logger.LogInfo(
-            std::string("AppLogger was initialized successfully for app ") +
+            std::string("cppLogger was initialized successfully for app ") +
             in_app_name);
         
         LogManager::initialized = true;
     }
-        
+
     return true;
 }
 
@@ -129,6 +153,10 @@ void LogManager::CleanUp()
         {
             str_logger_it->second->CleanUp();
             delete str_logger_it->second;
+
+            // Deleting component from map. It should be delete here to 
+            // prevent problem in _FlushLogs method.
+            component_name_obj_map->erase(str_logger_it);
         }
 
         delete component_name_obj_map;
@@ -143,6 +171,16 @@ void LogManager::CleanUp()
 
 Logger& LogManager::GetLogger(const std::string in_comp_name)
 {
+    if(LogManager::initialized == false)
+    {
+        std::string error_msg =
+            "LogManager is not initialized yet. You need to call "
+            "LogManager::Init method before calling GetLogger method "
+            "for component " + in_comp_name;
+        throw std::runtime_error(error_msg);
+        std::terminate();
+    }
+
     if(in_comp_name.size() == 0)
     {
         std::string error_msg =
@@ -230,9 +268,9 @@ void Logger::_Log(
     if(logger.IsLogVVerbose())
     {
         std::string info_msg = 
-            std::string("Logging message of type ") + \
+            std::string("Logging message of type:- ") + \
             std::string(in_log_type) + \
-            std::string(" messge ") + in_message;
+            std::string(" Message:- ") + in_message;
         logger.LogDebug(info_msg);
     }
 
@@ -409,78 +447,191 @@ Logger& Logger::operator<< (bool in_message)
 {
     if(in_message) this->cache_message_string += "TRUE";
     else this->cache_message_string += "FALSE";
+    
+    // This is for end manipulator, after end manipulator cache message
+    // logger will finish but if after end maniuplator you are calling to 
+    // << operator it will take finished logger and enable it.
+    if(this->cache_message_logged == false)
+    {
+        this->cache_message_logged = true;    
+    }
+
     return *this;
 }
 
 Logger& Logger::operator<< (short in_message)
 {
     this->cache_message_string += std::to_string(in_message);
+    
+    // This is for end manipulator, after end manipulator cache message
+    // logger will finish but if after end maniuplator you are calling to 
+    // << operator it will take finished logger and enable it.
+    if(this->cache_message_logged == false)
+    {
+        this->cache_message_logged = true;    
+    }
+    
     return *this;
 }
 
 Logger& Logger::operator<< (unsigned short in_message)
 {
     this->cache_message_string += std::to_string(in_message);
+    
+    // This is for end manipulator, after end manipulator cache message
+    // logger will finish but if after end maniuplator you are calling to 
+    // << operator it will take finished logger and enable it.
+    if(this->cache_message_logged == false)
+    {
+        this->cache_message_logged = true;    
+    }
+    
     return *this;
 }
 
 Logger& Logger::operator<< (int in_message)
 {
     this->cache_message_string += std::to_string(in_message);
+    
+    // This is for end manipulator, after end manipulator cache message
+    // logger will finish but if after end maniuplator you are calling to 
+    // << operator it will take finished logger and enable it.
+    if(this->cache_message_logged == false)
+    {
+        this->cache_message_logged = true;    
+    }
+    
     return *this;
 }
         
 Logger& Logger::operator<< (unsigned int in_message)
 {
     this->cache_message_string += std::to_string(in_message);
+    
+    // This is for end manipulator, after end manipulator cache message
+    // logger will finish but if after end maniuplator you are calling to 
+    // << operator it will take finished logger and enable it.
+    if(this->cache_message_logged == false)
+    {
+        this->cache_message_logged = true;    
+    }
+    
     return *this;
 }
         
 Logger& Logger::operator<< (long in_message)
 {
     this->cache_message_string += std::to_string(in_message);
+    
+    // This is for end manipulator, after end manipulator cache message
+    // logger will finish but if after end maniuplator you are calling to 
+    // << operator it will take finished logger and enable it.
+    if(this->cache_message_logged == false)
+    {
+        this->cache_message_logged = true;    
+    }
+    
     return *this;
 }
         
 Logger& Logger::operator<< (unsigned long in_message)
 {
     this->cache_message_string += std::to_string(in_message);
+    
+    // This is for end manipulator, after end manipulator cache message
+    // logger will finish but if after end maniuplator you are calling to 
+    // << operator it will take finished logger and enable it.
+    if(this->cache_message_logged == false)
+    {
+        this->cache_message_logged = true;    
+    }
+    
     return *this;
 }
 
 Logger& Logger::operator<< (float in_message)
 {
     this->cache_message_string += std::to_string(in_message);
+    // This is for end manipulator, after end manipulator cache message
+    // logger will finish but if after end maniuplator you are calling to 
+    // << operator it will take finished logger and enable it.
+    if(this->cache_message_logged == false)
+    {
+        this->cache_message_logged = true;    
+    }
     return *this;
 }
         
 Logger& Logger::operator<< (double in_message)
 {
     this->cache_message_string += std::to_string(in_message);
+    // This is for end manipulator, after end manipulator cache message
+    // logger will finish but if after end maniuplator you are calling to 
+    // << operator it will take finished logger and enable it.
+    if(this->cache_message_logged == false)
+    {
+        this->cache_message_logged = true;    
+    }
     return *this;
 }
 
 Logger& Logger::operator<< (long double in_message)
 {
     this->cache_message_string += std::to_string(in_message);
+    // This is for end manipulator, after end manipulator cache message
+    // logger will finish but if after end maniuplator you are calling to 
+    // << operator it will take finished logger and enable it.
+    if(this->cache_message_logged == false)
+    {
+        this->cache_message_logged = true;    
+    }
     return *this;
 }
 
 Logger& Logger::operator<< (const char* in_message)
 {
     this->cache_message_string += std::string(in_message);
+    // This is for end manipulator, after end manipulator cache message
+    // logger will finish but if after end maniuplator you are calling to 
+    // << operator it will take finished logger and enable it.
+    if(this->cache_message_logged == false)
+    {
+        this->cache_message_logged = true;    
+    }
     return *this;
 }
 
 Logger& Logger::operator<< (const std::string& in_message)
 {
     this->cache_message_string += in_message;
+    // This is for end manipulator, after end manipulator cache message
+    // logger will finish but if after end maniuplator you are calling to 
+    // << operator it will take finished logger and enable it.
+    if(this->cache_message_logged == false)
+    {
+        this->cache_message_logged = true;    
+    }
     return *this;
 }
 
-Logger& Logger::operator<< (std::string in_message)
+Logger& Logger::operator<< (LoggerManipulator in_manipulator)
 {
-    this->cache_message_string += in_message;
+    if(in_manipulator == end)
+    {
+        // Logged the message, empty the message string and return reference.
+        this->_Log(
+            this->cache_log_type.c_str(), 
+            this->cache_file_name.c_str(),
+            this->cache_line_number, 
+            this->cache_method_name.c_str(),
+            this->cache_method_signature.c_str(), 
+            this->cache_message_string
+        );
+        this->cache_message_string = "";
+        this->cache_message_logged = false;
+        return *this;
+    }
+
     return *this;
 }
 
@@ -498,8 +649,10 @@ bool Logger::IsFine()
         this->component_log_level == "FINER" || 
         this->component_log_level == "FINE")
     {
+        logger.LogInfo("Logging level fine is true.");
         return true;
     }
+    logger.LogInfo("Logging level fine is false.");
     return false;
 }
 
@@ -516,8 +669,10 @@ bool Logger::IsFiner()
     if(this->component_log_level == "FINEST" || 
         this->component_log_level == "FINER")
     {
+        logger.LogInfo("Logging level finer is true.");
         return true;
     }
+    logger.LogInfo("Logging level finer is true.");
     return false;
 }
 
@@ -533,8 +688,10 @@ bool Logger::IsFinest()
     
     if(this->component_log_level == "FINEST")
     {
+        logger.LogInfo("Logging level finest is true.");
         return true;
     }
+    logger.LogInfo("Logging level finest is true.");
     return false;
 }
 

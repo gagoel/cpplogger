@@ -20,6 +20,7 @@
  **/
 #include <cstring>
 
+#include <iostream>
 #include <fstream>
 #include <string>
 #include <stdexcept>
@@ -30,8 +31,9 @@ namespace cpputils
 {
 namespace cpplogger
 {
-std::string LoggerLogging::logging_file_name = CPPLOGGER_LOG_FILE;
 
+bool LoggerLogging::initialized = false; 
+std::string LoggerLogging::logging_file_name = CPPLOGGER_LOG_FILE;
 std::fstream *LoggerLogging::logging_file_stream = NULL;
 
 #ifdef CPPLOGGER_VLOGGING
@@ -46,8 +48,6 @@ bool LoggerLogging::vverbose = true;
 bool LoggerLogging::vverbose = false;
 #endif
 
-bool LoggerLogging::initialized = false; 
-
 void LoggerLogging::Log(std::string message)
 {
     if(LoggerLogging::initialized == false)
@@ -57,11 +57,11 @@ void LoggerLogging::Log(std::string message)
  
     std::string log_message = "[" + this->package_name + "] " + message;
 
-    if(LoggerLogging::logging_file_stream->is_open())
+    if(logging_file_stream->is_open())
     {
-        LoggerLogging::logging_file_stream->write(
+        logging_file_stream->write(
 	    log_message.c_str(), log_message.size());
-        LoggerLogging::logging_file_stream->flush();
+        logging_file_stream->flush();
     }
 }
 
@@ -72,15 +72,21 @@ void LoggerLogging::SetLogFileName(const std::string& in_file_name)
 
 bool LoggerLogging::Init()
 {
-    if(LoggerLogging::initialized) return true;
+    if(LoggerLogging::initialized) 
+    {
+        return true;
+    }
 
-    LoggerLogging::logging_file_stream = new std::fstream(
-        LoggerLogging::logging_file_name.c_str(),
+    logging_file_stream = new std::fstream(
+        logging_file_name.c_str(),
 	    std::fstream::in | std::fstream::out | std::fstream::app);
 
-    if(!LoggerLogging::logging_file_stream->is_open())
+    if(!logging_file_stream->is_open())
     {
-        throw std::runtime_error("Error in opening cpplogger logging file");
+        std::string error_msg = 
+            "Error in opening cpplogger logging file. "
+            "file is :- " + logging_file_name;
+        throw std::runtime_error(error_msg.c_str());
     	return false;
     }
 
@@ -90,8 +96,11 @@ bool LoggerLogging::Init()
 
 void LoggerLogging::CleanUp()
 {
-    LoggerLogging::initialized = false;
-    LoggerLogging::logging_file_stream->close();
+    if(initialized == true)
+    {
+        LoggerLogging::logging_file_stream->close();
+        LoggerLogging::initialized = false;
+    }
 }
 
 LoggerLogging::LoggerLogging(std::string in_package_name)

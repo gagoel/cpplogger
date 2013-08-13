@@ -270,6 +270,8 @@ bool LoggerOutput::Init()
 
 void LoggerOutput::CleanUp()
 {
+    logger.LogInfo("Cleaning logger output");
+
     if(initialized == true)
     {
         std::map<std::string, LoggerOutput*>::iterator str_logger_output_it;
@@ -285,6 +287,8 @@ void LoggerOutput::CleanUp()
         LoggerLogging::CleanUp();
         initialized = false;
     }
+
+    logger.LogInfo("logger output cleaned successfully.");
 }
 
 LoggerOutput& LoggerOutput::GetLoggerOutputObject(
@@ -415,9 +419,7 @@ void LoggerOutput::OutputCriticalLog(
     // Freeing stack trace memory created by backtrace function
     free(backtrace_strings); 
 
-    // Cleanup everything and Terminate the program
-    //LoggerManager::CleanUp(this->appname);
-    exit(EXIT_FAILURE);
+    std::terminate();
 }
 
 void LoggerOutput::OutputErrorLog(
