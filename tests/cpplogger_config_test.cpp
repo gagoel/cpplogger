@@ -8,8 +8,8 @@
 #include <vector>
 #include <fstream>
 
-#include "cpplogger/cpplogger_utils.h"
-#include "cpplogger/cpplogger_config.h"
+#include "cpputils/cpplogger/cpplogger_utils.h"
+#include "cpputils/cpplogger/cpplogger_config.h"
 #include "gtest/gtest.h"
 
 using namespace cpputils::cpplogger;

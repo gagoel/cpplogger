@@ -25,7 +25,7 @@
 #include <string>
 #include <stdexcept>
 
-#include "cpplogger/cpplogger_logging.h"
+#include "cpputils/cpplogger/cpplogger_logging.h"
 
 namespace cpputils
 {

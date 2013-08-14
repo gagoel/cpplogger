@@ -10,7 +10,7 @@
 
 #ifdef HAVE_HANDLER_FILE
 
-#include "cpplogger/handlers/file/cpplogger_file_handler.h"
+#include "cpputils/cpplogger/handlers/file/cpplogger_file_handler.h"
 #include "gtest/gtest.h"
 
 using namespace cpputils::cpplogger;

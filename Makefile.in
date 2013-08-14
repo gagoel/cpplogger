@@ -86,7 +86,7 @@ test : gtest_build cpplogger_build cpplogger_handlers_build \
 
 install : all
 	$(MKDIR) $(libdir)/cpplogger
-	$(MKDIR) $(includedir)/cpplogger
+	$(MKDIR) $(includedir)/cpputils/cpplogger
 	$(MKDIR) $(prefix)/share/cpplogger
 
 	$(CP) $(abs_builddir)/libs/* $(libdir)/
@@ -104,7 +104,9 @@ install : all
 
 uninstall :
 	$(RM) $(libdir)/cpplogger
-	$(RM) $(includedir)/cpplogger
+	$(RM) $(libdir)/libcpplogger.a
+	$(RM) $(libdir)/libcpplogger.so
+	$(RM) $(includedir)/cpputils/cpplogger
 	$(RM) $(prefix)/share/cpplogger
 
 clean : 
@@ -208,7 +210,7 @@ CPPLOGGER_SRCS += \
     $(wildcard $(abs_cpplogger_srcdir)/*.cpp)
 
 CPPLOGGER_HEADERS += \
-    $(wildcard $(abs_cpplogger_includedir)/cpplogger/*.h)
+    $(wildcard $(abs_cpplogger_includedir)/cpputils/cpplogger/*.h)
 
 CPPLOGGER_AUX += \
     $(abs_top_srcdir)/README $(abs_top_srcdir)/Makefile.in \
@@ -237,9 +239,9 @@ cpplogger_build : \
 $(abs_cpplogger_builddir)/%.o : \
     $(abs_cpplogger_srcdir)/%.cpp $(CPPLOGGER_HEADERS)
     
-	$(MKDIR) $(abs_cpplogger_build_includedir)/cpplogger
-	$(CP) $(abs_cpplogger_includedir)/cpplogger/*.h \
-    $(abs_cpplogger_build_includedir)/cpplogger/
+	$(MKDIR) $(abs_cpplogger_build_includedir)/cpputils/cpplogger
+	$(CP) $(abs_cpplogger_includedir)/cpputils/cpplogger/*.h \
+    $(abs_cpplogger_build_includedir)/cpputils/cpplogger/
 	$(MKDIR) $(abs_cpplogger_builddir)
 	$(CXX) $(CPPFLAGS)  $(CXXFLAGS) $(CPPLOGGER_PREPROCESSOR) -fPIC -c $< -o $@
 
@@ -322,7 +324,7 @@ current_handler_headers = \
     $$(wildcard $(abs_top_handlers_srcdir)/$(1)/*.h)
 
 current_handler_build_headers = \
-    $$(addprefix $(abs_cpplogger_build_includedir)/cpplogger/handlers/$(1)/, \
+    $$(addprefix $(abs_cpplogger_build_includedir)/cpputils/cpplogger/handlers/$(1)/, \
     $$(notdir $$(current_handler_headers)))
 
 current_handler_objs = \
@@ -347,10 +349,10 @@ CPPLOGGER_HANDLERS_SLIBS += $$(current_handler_slib)
 CPPLOGGER_HANDLERS_LIB_PATH_PREPROCESSOR += \
     $$(current_handler_lib_path_preprocessor)
 
-$(abs_cpplogger_build_includedir)/cpplogger/handlers/$(1)/%.h : \
+$(abs_cpplogger_build_includedir)/cpputils/cpplogger/handlers/$(1)/%.h : \
     $(abs_top_handlers_srcdir)/$(1)/%.h
 
-	$(MKDIR) $(abs_cpplogger_build_includedir)/cpplogger/handlers/$(1)
+	$(MKDIR) $(abs_cpplogger_build_includedir)/cpputils/cpplogger/handlers/$(1)
 	$(CP) $$< $$@
 
 $(abs_top_handlers_builddir)/$(1)/%.o : \

@@ -29,7 +29,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "cpplogger/cpplogger_handler.h"
+#include "cpputils/cpplogger/cpplogger_handler.h"
 #include "cpplogger_file_handler.h"
 
 namespace cpputils

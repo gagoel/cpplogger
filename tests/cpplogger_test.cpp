@@ -11,12 +11,12 @@
 #include <fstream>
 
 #ifdef HAVE_HANDLER_FILE
-#include "cpplogger/handlers/file/cpplogger_file_handler.h"
+#include "cpputils/cpplogger/handlers/file/cpplogger_file_handler.h"
 #endif
 
-#include "cpplogger/cpplogger_handler.h"
-#include "cpplogger/cpplogger_config.h"
-#include "cpplogger/cpplogger.h"
+#include "cpputils/cpplogger/cpplogger_handler.h"
+#include "cpputils/cpplogger/cpplogger_config.h"
+#include "cpputils/cpplogger/cpplogger.h"
 #include "gtest/gtest.h"
 
 using namespace cpputils::cpplogger;

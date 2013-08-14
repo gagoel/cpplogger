@@ -93,7 +93,7 @@ method accordingly.
 Critical logging - (It will log message, debug stacktrace and terminate 
                     the program)
 --------------------------------------------------------------
-#include "cpplogger/cpplogger.h"
+#include "cpputils/cpplogger/cpplogger.h"
 using namespace cpputils::cpplogger;
 
 LogManager::Init("appname", "optional-config-file");
@@ -105,7 +105,7 @@ LogManager::CleanUp();
 
 Error logging - (It will log error message.)
 --------------------------------------------------------------
-#include "cpplogger/cpplogger.h"
+#include "cpputils/cpplogger/cpplogger.h"
 using namespace cpputils::cpplogger;
 
 LogManager::Init("appname", "optional-config-file");
@@ -117,7 +117,7 @@ LogManager::CleanUp();
 
 Warning logging - (It will log warning message.)
 --------------------------------------------------------------
-#include "cpplogger/cpplogger.h"
+#include "cpputils/cpplogger/cpplogger.h"
 using namespace cpputils::cpplogger;
 
 LogManager::Init("appname", "optional-config-file");
@@ -133,7 +133,7 @@ Info logging - (It will log info message. It will log only if log level for
                 file to enable it -
                 SetLogLevel   your.package.name   FINE)
 --------------------------------------------------------------
-#include "cpplogger/cpplogger.h"
+#include "cpputils/cpplogger/cpplogger.h"
 using namespace cpputils::cpplogger;
 
 LogManager::Init("appname", "optional-config-file");
@@ -149,7 +149,7 @@ Debug logging - (It will log debug message. It will log only if log level for
                 file to enable it -
                 SetLogLevel   your.package.name   FINER)
 --------------------------------------------------------------
-#include "cpplogger/cpplogger.h"
+#include "cpputils/cpplogger/cpplogger.h"
 using namespace cpputils::cpplogger;
 
 LogManager::Init("appname", "optional-config-file");
@@ -165,7 +165,7 @@ Hack logging - (It will log hack message. It will log only if log level for
                 file to enable it -
                 SetLogLevel   your.package.name   FINEST)
 --------------------------------------------------------------
-#include "cpplogger/cpplogger.h"
+#include "cpputils/cpplogger/cpplogger.h"
 using namespace cpputils::cpplogger;
 
 LogManager::Init("appname", "optional-config-file");
@@ -183,7 +183,7 @@ Info logging with FINE log level check -
     (It will call log info method if logging level for current package is FINE
      or higher.
 --------------------------------------------------------------
-#include "cpplogger/cpplogger.h"
+#include "cpputils/cpplogger/cpplogger.h"
 using namespace cpputils::cpplogger;
 
 LogManager::Init("appname", "optional-config-file");

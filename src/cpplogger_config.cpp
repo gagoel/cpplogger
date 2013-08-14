@@ -19,7 +19,7 @@
 
  **/
 
-#include "cpplogger/cpplogger_config.h"
+#include "cpputils/cpplogger/cpplogger_config.h"
 
 namespace cpputils
 {

@@ -48,8 +48,8 @@
 
  **/
 
-#include "cpplogger/cpplogger_logging.h"
-#include "cpplogger/cpplogger_handler.h"
+#include "cpputils/cpplogger/cpplogger_logging.h"
+#include "cpputils/cpplogger/cpplogger_handler.h"
 
 namespace cpputils
 {
